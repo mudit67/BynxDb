@@ -25,11 +25,12 @@ type DAL struct {
 }
 
 func DalCreate(path string, pageSize int) (*DAL, error) {
-	dal := &DAL{Meta: newMetaPage()}
+	dal := &DAL{Meta: newMetaPage(), pageSize: pageSize}
 	if _, err := os.Stat(path); err == nil {
 		// If a database exists
 		fmt.Println("Database Exists")
-		if dal.file, err = os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0666); err != nil {
+		dal.file, err = os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0666)
+		if err != nil {
 			_ = dal.Close()
 			return nil, err
 		}
@@ -58,13 +59,13 @@ func DalCreate(path string, pageSize int) (*DAL, error) {
 		}
 		dal.freeList = freeListCreate()
 		dal.freelistPage = dal.GetNextPage()
-		// if _, err := dal.WriteFreelist(); err != nil {
-		// 	return nil, err
-		// }
+		if _, err := dal.WriteFreelist(); err != nil {
+			return nil, err
+		}
 
-		// if _, err := dal.writeMeta(dal.Meta); err != nil {
-		// 	return nil, err
-		// }
+		if _, err := dal.WriteMeta(dal.Meta); err != nil {
+			return nil, err
+		}
 
 	} else {
 		return nil, err
@@ -95,7 +96,7 @@ func (d *DAL) ReadPage(pageNum pgNum) (*page, error) {
 
 	offset := int(pageNum) * d.pageSize
 
-	if _, err := d.file.WriteAt(p.Data, int64(offset)); err != nil {
+	if _, err := d.file.ReadAt(p.Data, int64(offset)); err != nil {
 		return nil, err
 	}
 	return p, nil
@@ -107,7 +108,7 @@ func (d *DAL) WritePage(p *page) error {
 	return err
 }
 
-func (d *DAL) writeMeta(Meta *Meta) (*page, error) {
+func (d *DAL) WriteMeta(Meta *Meta) (*page, error) {
 	p := d.AllocateEmptyPage()
 	p.Num = metaPageNum
 
@@ -134,7 +135,7 @@ func (d *DAL) readMeta() (*Meta, error) {
 func (d *DAL) WriteFreelist() (*page, error) {
 	p := d.AllocateEmptyPage()
 	p.Num = d.freelistPage
-	fmt.Println("p.Data: ", p.Data)
+	// fmt.Println("p.Data: ", p.Data)
 	d.freeList.serialize(p.Data)
 
 	if err := d.WritePage(p); err != nil {
