@@ -2,31 +2,21 @@ package main
 
 import (
 	"BynxDB/core"
+	"fmt"
 	"os"
 )
 
 func main() {
-	dal, _ := core.DalCreate("check.db", os.Getpagesize())
+	dal, _ := core.DalCreate("./mainTest", os.Getpagesize())
 
-	p := dal.AllocateEmptyPage()
-	p.Num = dal.GetNextPage()
-	copy(p.Data, "Data")
+	node, _ := dal.Getnode(dal.Root)
+	node.DAL = dal
 
-	_ = dal.WritePage(p)
-	_, _ = dal.WriteFreelist()
+	index, containingNode, _ := node.Findkey([]byte("Key1"))
 
-	_ = dal.Close()
+	res := containingNode.Items[index]
 
-	dal, _ = core.DalCreate("check.db", os.Getpagesize())
+	fmt.Printf("Key is: %s, Value is: %s", res.Key, res.Value)
 
-	p = dal.AllocateEmptyPage()
-	p.Num = dal.GetNextPage()
-	copy(p.Data, "Data 2")
-	_ = dal.WritePage(p)
-
-	pageNum := dal.GetNextPage()
-	dal.ReleasedPage(pageNum)
-
-	_, _ = dal.WriteFreelist()
-
+	dal.Close()
 }

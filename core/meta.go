@@ -8,6 +8,7 @@ const (
 
 // Meta is the Meta page of the db
 type Meta struct {
+	Root         pgNum
 	freelistPage pgNum
 }
 
@@ -17,13 +18,18 @@ func newMetaPage() *Meta {
 
 func (m *Meta) Serialize(buf []byte) {
 	pos := 0
-
+	binary.LittleEndian.PutUint64(buf[pos:], uint64(m.Root))
+	pos += pageNumSize
 	binary.LittleEndian.PutUint64(buf[pos:], uint64(m.freelistPage))
 	pos += pageNumSize
 }
 
 func (m *Meta) Deserialize(buf []byte) {
 	pos := 0
+
+	m.Root = pgNum(binary.LittleEndian.Uint64(buf[pos:]))
+	pos += pageNumSize
+
 	m.freelistPage = pgNum(binary.LittleEndian.Uint64(buf[pos:]))
 	pos += pageNumSize
 }

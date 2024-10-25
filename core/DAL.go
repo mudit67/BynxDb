@@ -34,7 +34,7 @@ func DalCreate(path string, pageSize int) (*DAL, error) {
 			_ = dal.Close()
 			return nil, err
 		}
-		Meta, err := dal.readMeta()
+		Meta, err := dal.Readmeta()
 
 		if err != nil {
 			_ = dal.Close()
@@ -43,7 +43,7 @@ func DalCreate(path string, pageSize int) (*DAL, error) {
 
 		dal.Meta = Meta
 
-		freeList, err := dal.readFreeList()
+		freeList, err := dal.Readfreelist()
 
 		if err != nil {
 			return nil, err
@@ -59,11 +59,11 @@ func DalCreate(path string, pageSize int) (*DAL, error) {
 		}
 		dal.freeList = freeListCreate()
 		dal.freelistPage = dal.GetNextPage()
-		if _, err := dal.WriteFreelist(); err != nil {
+		if _, err := dal.Writefreelist(); err != nil {
 			return nil, err
 		}
 
-		if _, err := dal.WriteMeta(dal.Meta); err != nil {
+		if _, err := dal.Writemeta(dal.Meta); err != nil {
 			return nil, err
 		}
 
@@ -85,14 +85,14 @@ func (d *DAL) Close() error {
 }
 
 // Allocate space in memort the size of a page in disk
-func (d *DAL) AllocateEmptyPage() *page {
+func (d *DAL) Allocateemptypage() *page {
 	return &page{
 		Data: make([]byte, d.pageSize),
 	}
 }
 
-func (d *DAL) ReadPage(pageNum pgNum) (*page, error) {
-	p := d.AllocateEmptyPage()
+func (d *DAL) Readpage(pageNum pgNum) (*page, error) {
+	p := d.Allocateemptypage()
 
 	offset := int(pageNum) * d.pageSize
 
@@ -102,26 +102,27 @@ func (d *DAL) ReadPage(pageNum pgNum) (*page, error) {
 	return p, nil
 }
 
-func (d *DAL) WritePage(p *page) error {
+func (d *DAL) Writepage(p *page) error {
 	offset := int64(p.Num) * int64(d.pageSize)
 	_, err := d.file.WriteAt(p.Data, offset)
 	return err
 }
 
-func (d *DAL) WriteMeta(Meta *Meta) (*page, error) {
-	p := d.AllocateEmptyPage()
+func (d *DAL) Writemeta(Meta *Meta) (*page, error) {
+	p := d.Allocateemptypage()
 	p.Num = metaPageNum
 
 	Meta.Serialize(p.Data)
 
-	if err := d.WritePage(p); err != nil {
+	if err := d.Writepage(p); err != nil {
 		return nil, err
 	}
 	return p, nil
 }
 
-func (d *DAL) readMeta() (*Meta, error) {
-	p, err := d.ReadPage(metaPageNum)
+func (d *DAL) Readmeta() (*Meta, error) {
+	fmt.Println("Reading meta page: ", metaPageNum)
+	p, err := d.Readpage(metaPageNum)
 
 	if err != nil {
 		return nil, err
@@ -132,13 +133,13 @@ func (d *DAL) readMeta() (*Meta, error) {
 	return Meta, nil
 }
 
-func (d *DAL) WriteFreelist() (*page, error) {
-	p := d.AllocateEmptyPage()
+func (d *DAL) Writefreelist() (*page, error) {
+	p := d.Allocateemptypage()
 	p.Num = d.freelistPage
 	// fmt.Println("p.Data: ", p.Data)
 	d.freeList.serialize(p.Data)
 
-	if err := d.WritePage(p); err != nil {
+	if err := d.Writepage(p); err != nil {
 		return nil, err
 	}
 	d.freelistPage = p.Num
@@ -146,8 +147,8 @@ func (d *DAL) WriteFreelist() (*page, error) {
 
 }
 
-func (d *DAL) readFreeList() (*freeList, error) {
-	p, err := d.ReadPage(d.freelistPage)
+func (d *DAL) Readfreelist() (*freeList, error) {
+	p, err := d.Readpage(d.freelistPage)
 	if err != nil {
 		return nil, err
 	}
@@ -158,4 +159,36 @@ func (d *DAL) readFreeList() (*freeList, error) {
 
 	return freeList, nil
 
+}
+
+func (d *DAL) Getnode(pageNum pgNum) (*Node, error) {
+	p, err := d.Readpage(pageNum)
+	if err != nil {
+		return nil, err
+	}
+	node := NodeCreate()
+	node.deserialize(p.Data)
+	node.Pagenum = pageNum
+	return node, nil
+}
+
+func (d *DAL) Writenode(n *Node) (*Node, error) {
+	p := d.Allocateemptypage()
+	if n.Pagenum == 0 {
+		p.Num = d.GetNextPage()
+		n.Pagenum = p.Num
+	} else {
+		p.Num = n.Pagenum
+	}
+
+	p.Data = n.serialize(p.Data)
+	err := d.Writepage(p)
+	if err != nil {
+		return nil, err
+	}
+	return n, nil
+}
+
+func (d *DAL) Deletenode(pageNum pgNum) {
+	d.ReleasedPage(pageNum)
 }
