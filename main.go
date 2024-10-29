@@ -17,6 +17,5 @@ func main() {
 	res := containingNode.Items[index]
 
 	fmt.Printf("Key is: %s, Value is: %s", res.Key, res.Value)
-
 	dal.Close()
 }

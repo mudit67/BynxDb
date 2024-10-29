@@ -1,6 +1,8 @@
 package core
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+)
 
 type freeList struct {
 	maxPage       pgNum

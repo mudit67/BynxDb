@@ -167,7 +167,7 @@ func (d *DAL) Getnode(pageNum pgNum) (*Node, error) {
 		return nil, err
 	}
 	node := NodeCreate()
-	node.deserialize(p.Data)
+	node.Deserialize(p.Data)
 	node.Pagenum = pageNum
 	return node, nil
 }
