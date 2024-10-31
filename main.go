@@ -7,15 +7,27 @@ import (
 )
 
 func main() {
-	dal, _ := core.DalCreate("./mainTest", os.Getpagesize())
+	options := &core.Options{
+		PageSize:       os.Getpagesize(),
+		MinFillPercent: 0.0125,
+		MaxFillPercent: 0.025,
+	}
+	dal, _ := core.DalCreate("./mainTest", options)
 
-	node, _ := dal.Getnode(dal.Root)
-	node.DAL = dal
+	c := core.CollectionCreate([]byte("collection1"), dal.Root)
+	c.DAL = dal
 
-	index, containingNode, _ := node.Findkey([]byte("Key1"))
+	_ = c.Put([]byte("Key1"), []byte("Value1"))
+	_ = c.Put([]byte("Key2"), []byte("Value2"))
+	_ = c.Put([]byte("Key3"), []byte("Value3"))
+	_ = c.Put([]byte("Key4"), []byte("Value4"))
+	_ = c.Put([]byte("Key5"), []byte("Value5"))
+	_ = c.Put([]byte("Key6"), []byte("Value6"))
 
-	res := containingNode.Items[index]
+	item, _ := c.Find([]byte("Key1"))
 
-	fmt.Printf("Key is: %s, Value is: %s", res.Key, res.Value)
+	fmt.Printf("key is: %s, value is: %s\n", item.Key, item.Value)
+	_ = dal.Close()
+
 	dal.Close()
 }

@@ -150,26 +150,104 @@ func (n *Node) Findkeyinnode(Key []byte) (bool, int) {
 	}
 	return false, len(n.Items)
 }
-func (n *Node) Findkey(Key []byte) (int, *Node, error) {
-	index, node, err := Findkeyhelper(n, Key)
+func (n *Node) Findkey(Key []byte, exact bool) (int, *Node, []int, error) {
+	ancestorIndexes := &[]int{0}
+	index, node, err := Findkeyhelper(n, Key, exact, ancestorIndexes)
 	if err != nil {
-		return -1, nil, err
+		return -1, nil, nil, err
 	}
-	return index, node, nil
+	return index, node, *ancestorIndexes, nil
 }
 
-func Findkeyhelper(n *Node, Key []byte) (int, *Node, error) {
+func Findkeyhelper(n *Node, Key []byte, exact bool, ancestorIndexes *[]int) (int, *Node, error) {
 	wasFound, index := n.Findkeyinnode(Key)
 	if wasFound {
 		return index, n, nil
 	}
+
 	// If we reached a leaf node
 	if n.Isleaf() {
-		return -1, nil, nil
+		if exact {
+			return -1, nil, nil
+		}
+		return index, n, nil
 	}
+
+	*ancestorIndexes = append(*ancestorIndexes, index)
 	nextChild, err := n.Getnode(n.Childnodes[index])
 	if err != nil {
 		return -1, nil, err
 	}
-	return Findkeyhelper(nextChild, Key)
+	return Findkeyhelper(nextChild, Key, exact, ancestorIndexes)
+}
+
+// elementSize returns the size of a key-value-childNode triplet at a given index.
+// If the node is a leaf, then the size of a key-value pair is returned.
+// It's assumed i <= len(n.items)
+func (n *Node) elementSize(i int) int {
+	size := 0
+	size += len(n.Items[i].Key)
+	size += len(n.Items[i].Value)
+	size += pageNumSize
+	return size
+}
+
+// nodeSize returns the node's size in bytes
+func (n *Node) nodeSize() int {
+	size := 0
+	size += nodeHeaderSize
+
+	for i := range n.Items {
+		size += n.elementSize(i)
+	}
+
+	size += pageNumSize
+
+	return size
+}
+
+func (n *Node) addItem(item *Item, insertionIndex int) int {
+	if len(n.Items) == insertionIndex {
+		n.Items = append(n.Items, item)
+	} else {
+		n.Items = append(n.Items[:insertionIndex+1], n.Items[insertionIndex:]...)
+		n.Items[insertionIndex] = item
+	}
+	return insertionIndex
+
+}
+
+func (n *Node) isUnderPopulated() bool {
+	return n.DAL.isUnderPopulated(n)
+}
+
+func (n *Node) isOverPopulated() bool {
+	return n.DAL.isOverPopulated(n)
+}
+
+func (parentNode *Node) split(nodeToSplit *Node, nodeToSplitIndex int) {
+	splitIndex := parentNode.DAL.getSplitIndex(nodeToSplit)
+
+	middleItem := nodeToSplit.Items[splitIndex]
+	var newNode *Node
+	if nodeToSplit.Isleaf() {
+		newNode, _ = parentNode.Writenode(parentNode.DAL.nodeCreate(nodeToSplit.Items[splitIndex+1:], []pgNum{}))
+		nodeToSplit.Items = nodeToSplit.Items[:splitIndex]
+	} else {
+		newNode, _ = parentNode.Writenode(parentNode.DAL.nodeCreate(nodeToSplit.Items[splitIndex+1:], newNode.Childnodes[splitIndex+1:]))
+		nodeToSplit.Items = nodeToSplit.Items[:splitIndex]
+		nodeToSplit.Childnodes = nodeToSplit.Childnodes[:splitIndex+1]
+	}
+
+	parentNode.addItem(middleItem, nodeToSplitIndex)
+
+	if len(parentNode.Childnodes) == nodeToSplitIndex+1 {
+		parentNode.Childnodes = append(parentNode.Childnodes, newNode.Pagenum)
+	} else {
+		parentNode.Childnodes = append(parentNode.Childnodes[:nodeToSplitIndex+1], parentNode.Childnodes[nodeToSplitIndex:]...)
+		parentNode.Childnodes[nodeToSplitIndex] = newNode.Pagenum
+	}
+
+	parentNode.Writenodes(parentNode, nodeToSplit)
+
 }

@@ -9,7 +9,8 @@ import (
 type pgNum uint64
 
 const (
-	pageNumSize = 8
+	pageNumSize    = 8
+	nodeHeaderSize = 3
 )
 
 type page struct {
@@ -17,15 +18,28 @@ type page struct {
 	Data []byte
 }
 
+type Options struct {
+	PageSize       int
+	MinFillPercent float32
+	MaxFillPercent float32
+}
+
+var DefaultOptions = &Options{
+	MinFillPercent: 0.5,
+	MaxFillPercent: 0.95,
+}
+
 type DAL struct {
-	file     *os.File
-	pageSize int
+	file           *os.File
+	pageSize       int
+	MinFillPercent float32
+	MaxFillPercent float32
 	*freeList
 	*Meta
 }
 
-func DalCreate(path string, pageSize int) (*DAL, error) {
-	dal := &DAL{Meta: newMetaPage(), pageSize: pageSize}
+func DalCreate(path string, options *Options) (*DAL, error) {
+	dal := &DAL{Meta: newMetaPage(), pageSize: options.PageSize, MinFillPercent: options.MinFillPercent, MaxFillPercent: options.MaxFillPercent}
 	if _, err := os.Stat(path); err == nil {
 		// If a database exists
 		fmt.Println("Database Exists")
@@ -169,7 +183,17 @@ func (d *DAL) Getnode(pageNum pgNum) (*Node, error) {
 	node := NodeCreate()
 	node.Deserialize(p.Data)
 	node.Pagenum = pageNum
+	node.DAL = d
 	return node, nil
+}
+
+func (d *DAL) nodeCreate(items []*Item, childNodes []pgNum) *Node {
+	node := NodeCreate()
+	node.Items = items
+	node.Childnodes = childNodes
+	node.DAL = d
+	node.Pagenum = d.GetNextPage()
+	return node
 }
 
 func (d *DAL) Writenode(n *Node) (*Node, error) {
@@ -180,8 +204,7 @@ func (d *DAL) Writenode(n *Node) (*Node, error) {
 	} else {
 		p.Num = n.Pagenum
 	}
-
-	p.Data = n.serialize(p.Data)
+	p.Data = n.Serialize(p.Data)
 	err := d.Writepage(p)
 	if err != nil {
 		return nil, err
@@ -191,4 +214,33 @@ func (d *DAL) Writenode(n *Node) (*Node, error) {
 
 func (d *DAL) Deletenode(pageNum pgNum) {
 	d.ReleasedPage(pageNum)
+}
+
+func (d *DAL) maxThreshold() float32 {
+	return d.MaxFillPercent * float32(d.pageSize)
+}
+
+func (d *DAL) isOverPopulated(node *Node) bool {
+	return float32(node.nodeSize()) > d.maxThreshold()
+}
+
+func (d *DAL) minThreshold() float32 {
+	return d.MinFillPercent * float32(d.pageSize)
+}
+
+func (d *DAL) isUnderPopulated(node *Node) bool {
+	return float32(node.nodeSize()) < d.minThreshold()
+}
+
+func (d *DAL) getSplitIndex(node *Node) int {
+	size := nodeHeaderSize
+
+	for i := range node.Items {
+		size += node.elementSize(i)
+
+		if float32(size) > d.minThreshold() && i < len(node.Items)-1 {
+			return i + 1
+		}
+	}
+	return -1
 }
