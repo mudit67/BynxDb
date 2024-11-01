@@ -234,7 +234,7 @@ func (parentNode *Node) split(nodeToSplit *Node, nodeToSplitIndex int) {
 		newNode, _ = parentNode.Writenode(parentNode.DAL.nodeCreate(nodeToSplit.Items[splitIndex+1:], []pgNum{}))
 		nodeToSplit.Items = nodeToSplit.Items[:splitIndex]
 	} else {
-		newNode, _ = parentNode.Writenode(parentNode.DAL.nodeCreate(nodeToSplit.Items[splitIndex+1:], newNode.Childnodes[splitIndex+1:]))
+		newNode, _ = parentNode.Writenode(parentNode.DAL.nodeCreate(nodeToSplit.Items[splitIndex+1:], nodeToSplit.Childnodes[splitIndex+1:]))
 		nodeToSplit.Items = nodeToSplit.Items[:splitIndex]
 		nodeToSplit.Childnodes = nodeToSplit.Childnodes[:splitIndex+1]
 	}
