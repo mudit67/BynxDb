@@ -60,7 +60,7 @@ func (c *Collection) Put(key []byte, value []byte) error {
 		return err
 	}
 
-	if nodeToInsertIn.Items != nil && insertionIndex < len(nodeToInsertIn.Items) && bytes.Compare(nodeToInsertIn.Items[insertionIndex].Key, key) == 0 {
+	if nodeToInsertIn.Items != nil && insertionIndex < len(nodeToInsertIn.Items) && bytes.Equal(nodeToInsertIn.Items[insertionIndex].Key, key) {
 		nodeToInsertIn.Items[insertionIndex] = i
 	} else {
 		nodeToInsertIn.addItem(i, insertionIndex)

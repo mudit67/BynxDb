@@ -279,10 +279,7 @@ func (parentNode *Node) split(nodeToSplit *Node, nodeToSplitIndex int) {
 
 func (n *Node) canSpareAnElement() bool {
 	splitIndex := n.getSplitIndex(n)
-	if splitIndex == -1 {
-		return false
-	}
-	return true
+	return splitIndex != -1
 }
 
 func (n *Node) removeItemFromLeaf(index int) {
