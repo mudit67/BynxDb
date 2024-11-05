@@ -23,11 +23,14 @@ func main() {
 	_ = c.Put([]byte("Key4"), []byte("Mudit"))
 	_ = c.Put([]byte("Key5"), []byte("Value5"))
 	_ = c.Put([]byte("Key6"), []byte("Value6"))
-
-	item, _ := c.Find([]byte("Key3"))
+	item, _ := c.Find([]byte("Key1"))
 
 	fmt.Printf("key is: %s, value is: %s\n", item.Key, item.Value)
-	_ = dal.Close()
 
-	dal.Close()
+	_ = c.Remove([]byte("Key1"))
+	item, _ = c.Find([]byte("Key1"))
+
+	dal.Writefreelist()
+	fmt.Printf("item is: %+v\n", item)
+	_ = dal.Close()
 }

@@ -3,6 +3,7 @@ package core
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 )
 
 type Item struct {
@@ -234,18 +235,18 @@ func (n *Node) isOverPopulated() bool {
 
 // * note: split() is responsible for creating new levels & by extenstion new nodes in the B-tree
 
-// split rebalances the tree after adding. After insertion the modified node has to be checked to make sure it
-// didn't exceed the maximum number of elements. If it did, then it has to be split and rebalanced. The transformation
-// is depicted in the graph below. If it's not a leaf node, then the children has to be moved as well as shown.
-// This may leave the parent unbalanced by having too many items so rebalancing has to be checked for all the ancestors.
-// The split is performed in a for loop to support splitting a node more than once. (Though in practice used only once).
-//
-//		        parentNode                              parentNode
-//	                3                                       3,6
-//		      /        \           ------>       /          |          \
-//		   a           modifiedNode            a       modifiedNode     newNode
-//	  1,2                 4,5,6,7,8            1,2          4,5         7,8
 func (parentNode *Node) split(nodeToSplit *Node, nodeToSplitIndex int) {
+	// split rebalances the tree after adding. After insertion the modified node has to be checked to make sure it
+	// didn't exceed the maximum number of elements. If it did, then it has to be split and rebalanced. The transformation
+	// is depicted in the graph below. If it's not a leaf node, then the children has to be moved as well as shown.
+	// This may leave the parent unbalanced by having too many items so rebalancing has to be checked for all the ancestors.
+	// The split is performed in a for loop to support splitting a node more than once. (Though in practice used only once).
+	//
+	//		        parentNode                              parentNode
+	//	                3                                       3,6
+	//		      /        \           ------>       /          |          \
+	//		   a           modifiedNode            a       modifiedNode     newNode
+	//	  1,2                 4,5,6,7,8            1,2          4,5         7,8
 	splitIndex := parentNode.DAL.getSplitIndex(nodeToSplit)
 
 	middleItem := nodeToSplit.Items[splitIndex]
@@ -260,11 +261,13 @@ func (parentNode *Node) split(nodeToSplit *Node, nodeToSplitIndex int) {
 	}
 
 	parentNode.addItem(middleItem, nodeToSplitIndex)
-
+	fmt.Println("Writing child nodes: ", len(parentNode.Childnodes), nodeToSplitIndex)
 	if len(parentNode.Childnodes) == nodeToSplitIndex+1 {
+
 		parentNode.Childnodes = append(parentNode.Childnodes, newNode.Pagenum)
 	} else {
 		parentNode.Childnodes = append(parentNode.Childnodes[:nodeToSplitIndex+1], parentNode.Childnodes[nodeToSplitIndex:]...)
+		fmt.Println(parentNode.Childnodes)
 		parentNode.Childnodes[nodeToSplitIndex] = newNode.Pagenum
 	}
 
@@ -273,6 +276,14 @@ func (parentNode *Node) split(nodeToSplit *Node, nodeToSplitIndex int) {
 }
 
 // * Deletion Auxi Functions
+
+func (n *Node) canSpareAnElement() bool {
+	splitIndex := n.getSplitIndex(n)
+	if splitIndex == -1 {
+		return false
+	}
+	return true
+}
 
 func (n *Node) removeItemFromLeaf(index int) {
 	noOfItems := len(n.Items)
@@ -313,5 +324,133 @@ func (n *Node) removeItemFromInternal(index int) ([]int, error) {
 	}
 	n.Items[index] = aNode.Items[len(aNode.Items)-1]
 	aNode.removeItemFromLeaf(len(aNode.Items) - 1)
+
 	return affectedNodes, nil
+}
+
+func rightRotate(aNode, bNode, pNode *Node, bNodeIndex int) {
+	// 	           p                                    p
+	//                 4                                    3
+	//	      /        \           ------>         /          \
+	//	   a           b (unbalanced)            a        b (unbalanced)
+	//      1,2,3             5                     1,2            4,5
+
+	aNodeLItem := aNode.Items[len(aNode.Items)-1]
+	aNode.Items = aNode.Items[:len(aNode.Items)-1]
+
+	pNodeItemIndex := bNodeIndex - 1
+	if bNodeIndex == 0 {
+		pNodeItemIndex = 0
+	}
+
+	pNodeItem := pNode.Items[pNodeItemIndex]
+	pNode.Items[pNodeItemIndex] = aNodeLItem
+
+	bNode.Items = append([]*Item{pNodeItem}, bNode.Items...)
+
+	if !aNode.Isleaf() {
+		childNodeToShift := aNode.Childnodes[len(aNode.Childnodes)-1]
+		aNode.Childnodes = aNode.Childnodes[:len(aNode.Childnodes)-1]
+		bNode.Childnodes = append([]pgNum{childNodeToShift}, bNode.Childnodes...)
+	}
+
+}
+
+func leftRotate(aNode, bNode, pNode *Node, bNodeIndex int) {
+	// 	           p                                     p
+	//             2                                     3
+	//	      /        \           ------>         /          \
+	//  a(unbalanced)       b                 a(unbalanced)        b
+	//   1                3,4,5                   1,2             4,5
+
+	bNodeItem := bNode.Items[0]
+	bNode.Items = bNode.Items[1:]
+
+	pNodeItemIndex := bNodeIndex
+	if pNodeItemIndex == len(pNode.Items) {
+		pNodeItemIndex = pNodeItemIndex - 1
+	}
+
+	pNodeItem := pNode.Items[pNodeItemIndex]
+	pNode.Items[pNodeItemIndex] = bNodeItem
+
+	aNode.Items = append(aNode.Items, pNodeItem)
+
+	if !bNode.Isleaf() {
+		childNodeToShift := bNode.Childnodes[0]
+		bNode.Childnodes = bNode.Childnodes[1:]
+		aNode.Childnodes = append(aNode.Childnodes, childNodeToShift)
+	}
+
+}
+
+func (n *Node) merge(bNode *Node, bNodeIndex int) error {
+	// 	               p                                     p
+	//                3,5                                    5
+	//	      /        |       \       ------>         /          \
+	//      a          b        c                     a            c
+	//     1,2         4        6,7                 1,2,3,4         6,7
+	fmt.Println("Merging nodes")
+	aNode, err := n.Getnode(n.Childnodes[bNodeIndex-1])
+	if err != nil {
+		return err
+	}
+
+	pNodeItem := n.Items[bNodeIndex-1]
+	n.Items = append(n.Items[:bNodeIndex-1], n.Items[bNodeIndex:]...)
+	aNode.Items = append(aNode.Items, pNodeItem)
+	n.Childnodes = append(n.Childnodes[:bNodeIndex], n.Childnodes[bNodeIndex+1:]...)
+
+	if !aNode.Isleaf() {
+		aNode.Childnodes = append(aNode.Childnodes, bNode.Childnodes...)
+	}
+
+	n.Writenodes(aNode, n)
+	n.DAL.Deletenode(bNode.Pagenum)
+
+	return nil
+}
+
+// rebalanceRemove rebalances the tree after a remove operation. This can be either by rotating to the right, to the
+// left or by merging. First, the sibling nodes are checked to see if they have enough items for rebalancing
+// (>= minItems+1). If they don't have enough items, then merging with one of the sibling nodes occurs. This may leave
+// the parent unbalanced by having too little items so rebalancing has to be checked for all the ancestors.
+func (n *Node) rebalanceRemove(unbalancedNode *Node, unbalancedNodeIndex int) error {
+	pNode := n
+	var rightNode *Node
+	// Check if right Rotate is feasible
+	if unbalancedNodeIndex != 0 {
+		leftNode, err := pNode.Getnode(pNode.Childnodes[unbalancedNodeIndex-1])
+		if err != nil {
+			return err
+		}
+		if leftNode.canSpareAnElement() {
+			rightRotate(leftNode, unbalancedNode, pNode, unbalancedNodeIndex)
+			pNode.Writenodes(leftNode, unbalancedNode, pNode)
+			return nil
+		}
+	}
+
+	// left Rotate
+	if unbalancedNodeIndex != len(pNode.Childnodes)-1 {
+		var err error
+		rightNode, err = pNode.Getnode(pNode.Childnodes[unbalancedNodeIndex+1])
+		if err != nil {
+			return err
+		}
+		if rightNode.canSpareAnElement() {
+			leftRotate(unbalancedNode, rightNode, pNode, unbalancedNodeIndex)
+			pNode.Writenodes(rightNode, pNode, unbalancedNode)
+		}
+	}
+	// The merge function merges a given node with its node to the right. So by default, we merge an unbalanced node
+	// with its left sibling. In the case where the unbalanced node is the leftmost, we have to replace the merge()
+	// parameters, so the unbalanced node right sibling, will be merged into the unbalanced node.
+	if unbalancedNodeIndex == 0 {
+		if rightNode == nil {
+			fmt.Println("right node is nil")
+		}
+		return pNode.merge(rightNode, unbalancedNodeIndex+1)
+	}
+	return pNode.merge(unbalancedNode, unbalancedNodeIndex)
 }
