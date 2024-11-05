@@ -98,6 +98,8 @@ func (d *DAL) Close() error {
 	return nil
 }
 
+// * Page Auxi Functions
+
 // Allocate space in memort the size of a page in disk
 func (d *DAL) Allocateemptypage() *page {
 	return &page{
@@ -121,6 +123,8 @@ func (d *DAL) Writepage(p *page) error {
 	_, err := d.file.WriteAt(p.Data, offset)
 	return err
 }
+
+// * (Maintaining) Persistance Auxi Functions
 
 func (d *DAL) Writemeta(Meta *Meta) (*page, error) {
 	p := d.Allocateemptypage()
@@ -175,6 +179,17 @@ func (d *DAL) Readfreelist() (*freeList, error) {
 
 }
 
+// * B-tree Struct Auxi Functions
+
+func (d *DAL) nodeCreate(items []*Item, childNodes []pgNum) *Node {
+	node := NodeCreate()
+	node.Items = items
+	node.Childnodes = childNodes
+	node.DAL = d
+	node.Pagenum = d.GetNextPage()
+	return node
+}
+
 func (d *DAL) Getnode(pageNum pgNum) (*Node, error) {
 	p, err := d.Readpage(pageNum)
 	if err != nil {
@@ -185,15 +200,6 @@ func (d *DAL) Getnode(pageNum pgNum) (*Node, error) {
 	node.Pagenum = pageNum
 	node.DAL = d
 	return node, nil
-}
-
-func (d *DAL) nodeCreate(items []*Item, childNodes []pgNum) *Node {
-	node := NodeCreate()
-	node.Items = items
-	node.Childnodes = childNodes
-	node.DAL = d
-	node.Pagenum = d.GetNextPage()
-	return node
 }
 
 func (d *DAL) Writenode(n *Node) (*Node, error) {
@@ -216,6 +222,8 @@ func (d *DAL) Deletenode(pageNum pgNum) {
 	d.ReleasedPage(pageNum)
 }
 
+// * Btree rules maintainance Auxi Functions.
+
 func (d *DAL) maxThreshold() float32 {
 	return d.MaxFillPercent * float32(d.pageSize)
 }
@@ -232,6 +240,7 @@ func (d *DAL) isUnderPopulated(node *Node) bool {
 	return float32(node.nodeSize()) < d.minThreshold()
 }
 
+// Return the index + 1 of the Item till which the minThreshold of a nodeSize hold true.
 func (d *DAL) getSplitIndex(node *Node) int {
 	size := nodeHeaderSize
 

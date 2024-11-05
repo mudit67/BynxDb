@@ -12,7 +12,7 @@ func main() {
 		MinFillPercent: 0.0125,
 		MaxFillPercent: 0.025,
 	}
-	dal, _ := core.DalCreate("./mainTest", options)
+	dal, _ := core.DalCreate("./check.db", options)
 
 	c := core.CollectionCreate([]byte("collection1"), dal.Root)
 	c.DAL = dal
