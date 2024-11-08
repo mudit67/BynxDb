@@ -34,6 +34,7 @@ type DAL struct {
 	pageSize       int
 	MinFillPercent float32
 	MaxFillPercent float32
+
 	*freeList
 	*Meta
 }
@@ -76,6 +77,18 @@ func DalCreate(path string, options *Options) (*DAL, error) {
 		if _, err := dal.Writefreelist(); err != nil {
 			return nil, err
 		}
+
+		// Init node
+		cNode, err := dal.Writenode(NodeCreate())
+		if err != nil {
+			return nil, err
+
+		}
+		dal.Root = cNode.Pagenum
+
+		// TableDef page
+
+		// dal.TableDefPage = dal.GetNextPage()
 
 		if _, err := dal.Writemeta(dal.Meta); err != nil {
 			return nil, err

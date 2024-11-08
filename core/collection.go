@@ -2,6 +2,7 @@ package core
 
 import (
 	"bytes"
+	"fmt"
 )
 
 type Collection struct {
@@ -9,13 +10,38 @@ type Collection struct {
 
 	root pgNum
 	DAL  *DAL
+	*TableDef
 }
 
-func CollectionCreate(name []byte, root pgNum) *Collection {
-	return &Collection{
-		name: name,
-		root: root,
+func CollectionCreate(name []byte, tD *TableDef, d *DAL) (*Collection, error) {
+	c := &Collection{
+		name:     name,
+		TableDef: tD,
+		DAL:      d,
 	}
+	fmt.Println(c.DAL.TableDefPage)
+	if c.DAL.TableDefPage != 0 {
+
+		tableDefPage, err := c.DAL.Readpage(c.DAL.TableDefPage)
+		if err != nil {
+			fmt.Println("Error in reading tableDef")
+			return nil, err
+		}
+		c.TableDef.Deserialize(tableDefPage.Data)
+		fmt.Println(c.TableDef)
+	} else {
+		tableDefPage := c.DAL.Allocateemptypage()
+		tableDefPage.Num = c.DAL.GetNextPage()
+		tableDefPage.Data = c.TableDef.Serialize(tableDefPage.Data)
+		c.DAL.TableDefPage = tableDefPage.Num
+		fmt.Println(tableDefPage.Num)
+
+		c.DAL.Writepage(tableDefPage)
+		c.DAL.Writemeta(c.DAL.Meta)
+	}
+
+	// c.DAL.Writepage()
+	return c, nil
 }
 
 // TODO: Add ancestorsIndexs
