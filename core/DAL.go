@@ -67,6 +67,11 @@ func DalCreate(path string, options *Options) (*DAL, error) {
 		dal.freeList = freeList
 	} else if errors.Is(err, os.ErrNotExist) {
 		fmt.Println("Creating new Database")
+		err = os.Mkdir("./db/", 0777)
+		if err != nil {
+			_ = dal.Close()
+			return nil, err
+		}
 		dal.file, err = os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0666)
 		if err != nil {
 			_ = dal.Close()

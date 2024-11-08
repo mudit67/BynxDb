@@ -3,23 +3,34 @@ package core
 import (
 	"bytes"
 	"fmt"
+	"os"
 )
 
 type Collection struct {
-	name []byte
-
+	Name []byte
 	root pgNum
 	DAL  *DAL
 	*TableDef
 }
 
-func CollectionCreate(name []byte, tD *TableDef, d *DAL) (*Collection, error) {
+var options = &Options{
+	PageSize:       os.Getpagesize(),
+	MinFillPercent: 0.0125,
+	MaxFillPercent: 0.025,
+}
+
+func CollectionCreate(name []byte, tD *TableDef) (*Collection, error) {
 	c := &Collection{
-		name:     name,
+		Name:     name,
 		TableDef: tD,
-		DAL:      d,
 	}
-	fmt.Println(c.DAL.TableDefPage)
+	dal, err := DalCreate("./db/"+string(name)+".db", options)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	c.DAL = dal
+	// fmt.Println(c.DAL.TableDefPage)
 	if c.DAL.TableDefPage != 0 {
 
 		tableDefPage, err := c.DAL.Readpage(c.DAL.TableDefPage)
@@ -42,6 +53,11 @@ func CollectionCreate(name []byte, tD *TableDef, d *DAL) (*Collection, error) {
 
 	// c.DAL.Writepage()
 	return c, nil
+}
+
+func (c *Collection) Close() {
+	c.DAL.Writefreelist()
+	c.DAL.Close()
 }
 
 // TODO: Add ancestorsIndexs
