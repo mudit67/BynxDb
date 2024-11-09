@@ -8,8 +8,9 @@ const (
 )
 
 type TableDef struct {
-	Types []uint16
-	Cols  []string
+	Types     []uint16
+	Cols      []string
+	PKeyIndex int //Starting with 0
 	// TableDefPage pgNum
 	// RootBtree    pgNum
 }

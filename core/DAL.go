@@ -63,14 +63,17 @@ func DalCreate(path string, options *Options) (*DAL, error) {
 		if err != nil {
 			return nil, err
 		}
-
+		fmt.Println(dal.Root)
 		dal.freeList = freeList
 	} else if errors.Is(err, os.ErrNotExist) {
 		fmt.Println("Creating new Database")
-		err = os.Mkdir("./db/", 0777)
-		if err != nil {
-			_ = dal.Close()
-			return nil, err
+		_, err := os.Stat("./db/")
+		if os.IsNotExist(err) {
+			err = os.Mkdir("./db/", 0777)
+			if err != nil {
+				_ = dal.Close()
+				return nil, err
+			}
 		}
 		dal.file, err = os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0666)
 		if err != nil {
@@ -84,7 +87,9 @@ func DalCreate(path string, options *Options) (*DAL, error) {
 		}
 
 		// Init node
-		cNode, err := dal.Writenode(NodeCreate())
+		tempNode := NodeCreate()
+		tempNode.Pagenum = dal.GetNextPage()
+		cNode, err := dal.Writenode(tempNode)
 		if err != nil {
 			return nil, err
 

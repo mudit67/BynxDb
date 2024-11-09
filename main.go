@@ -7,29 +7,27 @@ import (
 )
 
 func main() {
-	tD := &core.TableDef{Types: []uint16{core.TYPE_INT64, core.TYPE_BYTE}, Cols: []string{"ID", "Username"}}
-	c, err := core.CollectionCreate([]byte("collection1"), tD)
+	tD := &core.TableDef{Types: []uint16{core.TYPE_BYTE, core.TYPE_BYTE, core.TYPE_BYTE}, Cols: []string{"Full_Name", "Username", "Password"}, PKeyIndex: 1}
+
+	db, err := core.DbInit("user", tD)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	// _ = c.Put([]byte("Key1"), []byte("Value1"))
-	// _ = c.Put([]byte("Key2"), []byte("Value2"))
-	// _ = c.Put([]byte("Key3"), []byte("Unnat"))
-	// _ = c.Put([]byte("Key4"), []byte("Mudit"))
-	// _ = c.Put([]byte("Key5"), []byte("Value5"))
-	// _ = c.Put([]byte("Key6"), []byte("Value6"))
-	// item, _ := c.Find([]byte("Key1"))
-
-	// fmt.Printf("key is: %s, value is: %s\n", item.Key, item.Value)
-
-	// _ = c.Remove([]byte("Key1"))
-	// item, _ = c.Find([]byte("Key1"))
-
-	// dal.Writefreelist()
-	// fmt.Printf("item is: %+v\n", item)
-	// _ = dal.Close()
-	fmt.Println(string(c.Name), c.TableDef)
-	c.Close()
+	err = db.Insert(
+		[]byte("mudit67"),
+		[]byte("Mudit Bhardwaj"),
+		[]byte("checkmate"))
+	if err != nil {
+		fmt.Println(err)
+	}
+	rows, err := db.PKeyQuery([]byte("mudit67"))
+	if err != nil {
+		fmt.Println(err)
+	}
+	for _, row := range rows {
+		fmt.Println(string(row.([]byte)))
+	}
+	db.Close()
 }

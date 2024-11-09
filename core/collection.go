@@ -2,6 +2,7 @@ package core
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 )
@@ -32,7 +33,6 @@ func CollectionCreate(name []byte, tD *TableDef) (*Collection, error) {
 	c.DAL = dal
 	// fmt.Println(c.DAL.TableDefPage)
 	if c.DAL.TableDefPage != 0 {
-
 		tableDefPage, err := c.DAL.Readpage(c.DAL.TableDefPage)
 		if err != nil {
 			fmt.Println("Error in reading tableDef")
@@ -41,6 +41,10 @@ func CollectionCreate(name []byte, tD *TableDef) (*Collection, error) {
 		c.TableDef.Deserialize(tableDefPage.Data)
 		fmt.Println(c.TableDef)
 	} else {
+		if tD.PKeyIndex != 0 {
+			tD.Cols[tD.PKeyIndex], tD.Cols[0] = tD.Cols[0], tD.Cols[tD.PKeyIndex]
+			tD.Types[tD.PKeyIndex], tD.Types[0] = tD.Types[0], tD.Types[tD.PKeyIndex]
+		}
 		tableDefPage := c.DAL.Allocateemptypage()
 		tableDefPage.Num = c.DAL.GetNextPage()
 		tableDefPage.Data = c.TableDef.Serialize(tableDefPage.Data)
@@ -50,7 +54,8 @@ func CollectionCreate(name []byte, tD *TableDef) (*Collection, error) {
 		c.DAL.Writepage(tableDefPage)
 		c.DAL.Writemeta(c.DAL.Meta)
 	}
-
+	tD.PKeyIndex = 0
+	c.root = c.DAL.Root
 	// c.DAL.Writepage()
 	return c, nil
 }
@@ -84,6 +89,7 @@ func (c *Collection) Put(key []byte, value []byte) error {
 	var err error
 
 	if c.root == 0 {
+		fmt.Println("Creating new root")
 		nodeTemp := c.DAL.nodeCreate([]*Item{i}, []pgNum{})
 		root, err = c.DAL.Writenode(nodeTemp)
 		if err != nil {
@@ -103,7 +109,8 @@ func (c *Collection) Put(key []byte, value []byte) error {
 	}
 
 	if nodeToInsertIn.Items != nil && insertionIndex < len(nodeToInsertIn.Items) && bytes.Equal(nodeToInsertIn.Items[insertionIndex].Key, key) {
-		nodeToInsertIn.Items[insertionIndex] = i
+		// nodeToInsertIn.Items[insertionIndex] = i
+		return errors.New("[Error]:this key already excists in the key-value store")
 	} else {
 		nodeToInsertIn.addItem(i, insertionIndex)
 	}
