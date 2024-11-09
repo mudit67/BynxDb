@@ -39,7 +39,7 @@ func CollectionCreate(name []byte, tD *TableDef) (*Collection, error) {
 			return nil, err
 		}
 		c.TableDef.Deserialize(tableDefPage.Data)
-		fmt.Println(c.TableDef)
+		fmt.Println("Table Def:", c.TableDef)
 	} else {
 		if tD.PKeyIndex != 0 {
 			tD.Cols[tD.PKeyIndex], tD.Cols[0] = tD.Cols[0], tD.Cols[tD.PKeyIndex]
@@ -61,6 +61,7 @@ func CollectionCreate(name []byte, tD *TableDef) (*Collection, error) {
 }
 
 func (c *Collection) Close() {
+	c.DAL.Writemeta(c.DAL.Meta)
 	c.DAL.Writefreelist()
 	c.DAL.Close()
 }
@@ -96,6 +97,8 @@ func (c *Collection) Put(key []byte, value []byte) error {
 			return err
 		}
 		c.root = root.Pagenum
+		c.DAL.Meta.Root = root.Pagenum
+		c.DAL.Writemeta(c.DAL.Meta)
 		return nil
 	}
 	root, err = c.DAL.Getnode(c.root)
@@ -110,6 +113,7 @@ func (c *Collection) Put(key []byte, value []byte) error {
 
 	if nodeToInsertIn.Items != nil && insertionIndex < len(nodeToInsertIn.Items) && bytes.Equal(nodeToInsertIn.Items[insertionIndex].Key, key) {
 		// nodeToInsertIn.Items[insertionIndex] = i
+		// fmt.Println(key, value)
 		return errors.New("[Error]:this key already excists in the key-value store")
 	} else {
 		nodeToInsertIn.addItem(i, insertionIndex)
@@ -142,6 +146,8 @@ func (c *Collection) Put(key []byte, value []byte) error {
 			return err
 		}
 		c.root = newRoot.Pagenum
+		c.DAL.Meta.Root = newRoot.Pagenum
+		c.DAL.Writemeta(c.DAL.Meta)
 	}
 	return nil
 }

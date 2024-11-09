@@ -86,15 +86,15 @@ func DalCreate(path string, options *Options) (*DAL, error) {
 			return nil, err
 		}
 
-		// Init node
-		tempNode := NodeCreate()
-		tempNode.Pagenum = dal.GetNextPage()
-		cNode, err := dal.Writenode(tempNode)
-		if err != nil {
-			return nil, err
+		// // Init node
+		// tempNode := NodeCreate()
+		// tempNode.Pagenum = dal.GetNextPage()
+		// cNode, err := dal.Writenode(tempNode)
+		// if err != nil {
+		// 	return nil, err
 
-		}
-		dal.Root = cNode.Pagenum
+		// }
+		// dal.Root = cNode.Pagenum
 
 		// TableDef page
 

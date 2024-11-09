@@ -92,17 +92,18 @@ func checkTypeAndDecodeCol(tD *TableDef, colIndex int, buf []byte) (any, int) {
 }
 func checkTypeAndEncodeByte(tD *TableDef, colIndex int, val any, buf []byte) ([]byte, error) {
 	switch val.(type) {
-	case int64:
-		if tD.Types[0] != TYPE_INT64 {
+	case int:
+		if tD.Types[colIndex] != TYPE_INT64 {
 			return nil, errors.New("[Error]:wrong type for coloumn: " + tD.Cols[colIndex])
 		}
 		buf = utils.AddInt(buf, val.(int))
 	case []byte:
-		if tD.Types[0] != TYPE_BYTE {
+		if tD.Types[colIndex] != TYPE_BYTE {
 			return nil, errors.New("[Error]:wrong type for coloumn: " + tD.Cols[colIndex])
 		}
 		buf = utils.AddByte(buf, val.([]byte))
 	default:
+		fmt.Println(val)
 		return nil, errors.New("[Error]:wrong data type passed to function")
 	}
 	return buf, nil
