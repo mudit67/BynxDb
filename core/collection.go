@@ -93,6 +93,28 @@ func (c *Collection) Find(key []byte) (*Item, error) {
 	return containingNode.Items[index], nil
 }
 
+func (c *Collection) FetchAll(pageNum pgNum) ([]*Item, error) {
+	items := []*Item{}
+	if pageNum == 0 {
+		pageNum = c.root
+	}
+	node, err := c.DAL.Getnode(pageNum)
+	if err != nil {
+		return nil, err
+	}
+	items = append(items, node.Items...)
+	if !node.Isleaf() {
+		for _, childNode := range node.Childnodes {
+			subItems, err := c.FetchAll(childNode)
+			if err != nil {
+				return nil, err
+			}
+			items = append(items, subItems...)
+		}
+	}
+	return items, nil
+}
+
 func (c *Collection) Put(key []byte, value []byte) error {
 	i := ItemCreate(key, value)
 

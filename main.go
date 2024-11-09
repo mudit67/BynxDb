@@ -45,12 +45,21 @@ func main() {
 	// 	fmt.Println(string(cols.([]byte)))
 	// }
 
-	row, err := db.PointQueryUniqueCol(3, []byte("yash@gmail.com"))
+	// row, err := db.PointQueryUniqueCol(3, []byte("yash@gmail.com"))
+	// if err != nil {
+	// 	fmt.Println(err)
+	// }
+	// for _, cols := range row {
+	// 	fmt.Println(string(cols.([]byte)))
+	// }
+
+	rows, err := db.PointQuery(2, []byte("Software"))
 	if err != nil {
 		fmt.Println(err)
 	}
-	for _, cols := range row {
-		fmt.Println(string(cols.([]byte)))
+	fmt.Println("Count: ", len(rows))
+	for _, row := range rows {
+		printRow(row)
 	}
 	db.Close()
 
@@ -68,4 +77,11 @@ func main() {
 	// it, _ := col.Find([]byte("Key3"))
 	// fmt.Println(it)
 	// col.Close()
+}
+
+func printRow(row []any) {
+	for _, cols := range row {
+		fmt.Print(string(cols.([]byte)), " ")
+	}
+	fmt.Println()
 }

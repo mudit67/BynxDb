@@ -2,6 +2,7 @@ package core
 
 import (
 	"BynxDB/core/utils"
+	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -87,15 +88,38 @@ func (db *DB) PKeyQuery(val any) ([]any, error) {
 	if it == nil {
 		return nil, errors.New("[error] row not found")
 	}
-	fmt.Println(it)
-	var row []any
-	leftPos := 0
-	for i := 1; i < len(db.records.TableDef.Cols); i++ {
-		col, offset := checkTypeAndDecodeCol(db.records.TableDef, i, it.Value[leftPos:])
-		row = append(row, col)
-		leftPos += offset
+	// fmt.Println(it)
+	return decodeRow(db.records.TableDef, it.Value), nil
+}
+
+func (db *DB) PointQuery(colIndex int, val any) ([][]any, error) {
+	for _, col := range db.records.UniqueCols {
+		if colIndex == col {
+			row, err := db.PointQueryUniqueCol(colIndex, val)
+			if err != nil {
+				return nil, err
+			}
+			return [][]any{row}, err
+		}
 	}
-	return row, nil
+	_, err := checkTypeAndEncodeByte(db.records.TableDef, colIndex, val, []byte{})
+	if err != nil {
+		return nil, err
+	}
+	items, err := db.records.FetchAll(0)
+	if err != nil {
+		return nil, err
+	}
+	var rows [][]any
+	for _, item := range items {
+		row := decodeRow(db.records.TableDef, item.Value)
+		if db.records.TableDef.Types[colIndex] == TYPE_BYTE && bytes.Equal(row[colIndex-1].([]byte), val.([]byte)) {
+			rows = append(rows, row)
+		} else if row[colIndex-1] == val {
+			rows = append(rows, row)
+		}
+	}
+	return rows, nil
 }
 
 func (db *DB) PointQueryUniqueCol(colIndex int, val any) ([]any, error) {
@@ -105,7 +129,7 @@ func (db *DB) PointQueryUniqueCol(colIndex int, val any) ([]any, error) {
 			collectionIndex = i
 		}
 	}
-	if -1 == collectionIndex {
+	if collectionIndex == -1 {
 		return nil, errors.New("[error] not a unique column")
 	}
 	key, err := checkTypeAndEncodeByte(db.records.TableDef, colIndex, val, []byte{})
@@ -131,6 +155,22 @@ func (db *DB) Close() {
 	// fmt.Println(db.records.TableDef)
 	db.records.Close()
 }
+
+// func filterRow(tD *TableDef, cols []any, colIndex int, val any) bool {
+
+// }
+
+func decodeRow(tD *TableDef, buf []byte) []any {
+	var row []any
+	leftPos := 0
+	for i := 1; i < len(tD.Cols); i++ {
+		col, offset := checkTypeAndDecodeCol(tD, i, buf[leftPos:])
+		row = append(row, col)
+		leftPos += offset
+	}
+	return row
+}
+
 func checkTypeAndDecodeCol(tD *TableDef, colIndex int, buf []byte) (any, int) {
 	switch tD.Types[colIndex] {
 	case TYPE_INT64:
