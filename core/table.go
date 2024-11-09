@@ -7,10 +7,15 @@ const (
 	TYPE_BYTE  = 2
 )
 
+/*
+* Stores the structure and definition of a table. The primary key will always be stored in index 0. If the pKeyIndex != 0, the columns will be swapped
+ */
 type TableDef struct {
 	Types     []uint16
 	Cols      []string
-	PKeyIndex int //Starting with 0
+	PKeyIndex int //Starting with 0/
+	/* Indices of columns that have the contraint of being unique.	This tells the database to create a index Tree for that specific column. Starts with 0 */
+	UniqueCols []int
 	// TableDefPage pgNum
 	// RootBtree    pgNum
 }
@@ -27,9 +32,10 @@ type TableDef struct {
 // }
 
 func (tD *TableDef) Serialize(buf []byte) []byte {
-
+	/*
+		| Total Number of Columns | Columns' Types | Columns' Names | Number of Unique Columns | Indices of Unique Columns |
+	*/
 	leftPos := 0
-
 	numOfCol := len(tD.Cols)
 	binary.LittleEndian.PutUint16(buf[leftPos:], uint16(numOfCol))
 	leftPos += 2
@@ -51,6 +57,15 @@ func (tD *TableDef) Serialize(buf []byte) []byte {
 		leftPos += nameSize
 
 	}
+
+	noUniqueColumns := len(tD.UniqueCols)
+	binary.LittleEndian.PutUint16(buf[leftPos:], uint16(noUniqueColumns))
+	leftPos += 2
+
+	for _, col := range tD.UniqueCols {
+		binary.LittleEndian.PutUint16(buf[leftPos:], uint16(col))
+		leftPos += 2
+	}
 	return buf
 }
 
@@ -71,4 +86,12 @@ func (tD *TableDef) Deserialize(buf []byte) {
 		tD.Cols = append(tD.Cols, string(buf[leftPos:leftPos+nameLen]))
 		leftPos += nameLen
 	}
+	noUniqueColumns := int(binary.LittleEndian.Uint16(buf[leftPos:]))
+	leftPos += 2
+
+	for i := 0; i < noUniqueColumns; i++ {
+		tD.UniqueCols = append(tD.UniqueCols, int(binary.LittleEndian.Uint16(buf[leftPos:])))
+		leftPos += 2
+	}
+
 }

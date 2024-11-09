@@ -7,49 +7,50 @@ import (
 )
 
 func main() {
-	tD := &core.TableDef{Types: []uint16{core.TYPE_BYTE, core.TYPE_INT64, core.TYPE_BYTE}, Cols: []string{"Full_Name", "Username", "Password"}, PKeyIndex: 1}
+	tD := &core.TableDef{
+		Types:      []uint16{core.TYPE_BYTE, core.TYPE_INT64, core.TYPE_BYTE, core.TYPE_BYTE},
+		Cols:       []string{"Full_Name", "Emp_Id", "Dept", "email"},
+		PKeyIndex:  1,
+		UniqueCols: []int{1, 3},
+	}
 
-	db, err := core.DbInit("user", tD)
+	db, err := core.DbInit("Employee", tD)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	err = db.Insert(
-		1,
-		[]byte("Mudit Bhardwaj"),
-		[]byte("checkmate"))
+	err = db.Insert(1, []byte("Mudit Bhardwaj"), []byte("Software"), []byte("mudit@gmail.com"))
 	if err != nil {
 		fmt.Println(err)
 	}
-	err = db.Insert(
-		2,
-		[]byte("Unnat Bhardwaj"),
-		[]byte("checkmate"))
+	err = db.Insert(2, []byte("Unnat Bhardwaj"), []byte("Software"), []byte("unnat@gmail.com"))
 	if err != nil {
 		fmt.Println(err)
 	}
-	err = db.Insert(
-		3,
-		[]byte("Abhi Bhardwaj"),
-		[]byte("checkmate"))
+	err = db.Insert(3, []byte("Abhay Bhardwaj"), []byte("Software"), []byte("abhi@gmail.com"))
 	if err != nil {
 		fmt.Println(err)
 	}
-	err = db.Insert(
-		4,
-		[]byte("Yash Bhardwaj"),
-		[]byte("checkmate"))
+	err = db.Insert(4, []byte("Yash Bhardwaj"), []byte("Software"), []byte("yash@gmail.com"))
 	if err != nil {
 		fmt.Println(err)
 	}
 
-	rows, err := db.PKeyQuery(3)
+	// row, err := db.PKeyQuery(4)
+	// if err != nil {
+	// 	fmt.Println(err)
+	// }
+	// for _, cols := range row {
+	// 	fmt.Println(string(cols.([]byte)))
+	// }
+
+	row, err := db.PointQueryUniqueCol(3, []byte("yash@gmail.com"))
 	if err != nil {
 		fmt.Println(err)
 	}
-	for _, row := range rows {
-		fmt.Println(string(row.([]byte)))
+	for _, cols := range row {
+		fmt.Println(string(cols.([]byte)))
 	}
 	db.Close()
 

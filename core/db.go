@@ -2,46 +2,72 @@ package core
 
 import (
 	"BynxDB/core/utils"
+	"encoding/binary"
 	"errors"
 	"fmt"
+	"strings"
 )
 
 type DB struct {
-	records *Collection
+	records           *Collection
+	uniqueColumnsTree []*Collection
 	// index   []*Collection
 }
 
 func DbInit(name string, tD *TableDef) (*DB, error) {
+	name = strings.ToLower(name)
 	db := &DB{}
 	var err error
-	db.records, err = CollectionCreate([]byte(name+"Rec"), tD)
+	db.records, err = CollectionCreate([]byte(name+"rec"), tD)
 	if err != nil {
 		return nil, err
 	}
-	// pKeyType, pKeyName := tD.Types[tD.pKey], tD.Cols[tD.pKey]
-	// db.pKeyIndex, err := CollectionCreate([]byte(name + pKeyName))
+	for _, colIndex := range db.records.TableDef.UniqueCols {
+		fmt.Println("Creating Index Tree for column: ", colIndex)
+		indexTableDef := &TableDef{
+			Types: []uint16{db.records.TableDef.Types[colIndex], db.records.TableDef.Types[0]},
+			Cols:  []string{db.records.TableDef.Cols[colIndex], db.records.TableDef.Cols[0]},
+		}
+		tmpCol, err := CollectionCreate([]byte(name+db.records.TableDef.Cols[colIndex]), indexTableDef)
+		if err != nil {
+			return nil, err
+		}
+		db.uniqueColumnsTree = append(db.uniqueColumnsTree, tmpCol)
+	}
 	return db, nil
 }
 
-func (db *DB) Insert(check ...any) error {
-	if len(check) != len(db.records.TableDef.Cols) {
+func (db *DB) Insert(valuesToInsert ...any) error {
+	// fmt.Println("Inserting: ", valuesToInsert)
+	if len(valuesToInsert) != len(db.records.TableDef.Cols) {
 		return errors.New("[Error]:too few or too many columns")
 	}
-	key := make([]byte, 0)
+	pKey := make([]byte, 0)
 	value := make([]byte, 0)
-	key, err := checkTypeAndEncodeByte(db.records.TableDef, 0, check[0], key)
+	pKey, err := checkTypeAndEncodeByte(db.records.TableDef, 0, valuesToInsert[0], pKey)
 	if err != nil {
 		return err
 	}
 
-	for i := 1; i < len(check); i++ {
-		value, err = checkTypeAndEncodeByte(db.records.TableDef, i, check[i], value)
+	for i := 1; i < len(valuesToInsert); i++ {
+		value, err = checkTypeAndEncodeByte(db.records.TableDef, i, valuesToInsert[i], value)
 		if err != nil {
 			return err
 		}
 	}
-	fmt.Println(string(value))
-	err = db.records.Put(key, value)
+	// fmt.Println(string(value))
+	for i, col := range db.records.UniqueCols {
+		indexCollection := db.uniqueColumnsTree[i]
+		indexKey, err := checkTypeAndEncodeByte(db.records.TableDef, col, valuesToInsert[col], []byte{})
+		if err != nil {
+			return err
+		}
+		err = indexCollection.Put(indexKey, pKey)
+		if err != nil {
+			return err
+		}
+	}
+	err = db.records.Put(pKey, value)
 	if err != nil {
 		return err
 	}
@@ -53,9 +79,13 @@ func (db *DB) PKeyQuery(val any) ([]any, error) {
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println(val, key)
 	it, err := db.records.Find(key)
 	if err != nil {
 		return nil, err
+	}
+	if it == nil {
+		return nil, errors.New("[error] row not found")
 	}
 	fmt.Println(it)
 	var row []any
@@ -68,8 +98,37 @@ func (db *DB) PKeyQuery(val any) ([]any, error) {
 	return row, nil
 }
 
+func (db *DB) PointQueryUniqueCol(colIndex int, val any) ([]any, error) {
+	var collectionIndex int = -1
+	for i, col := range db.records.TableDef.UniqueCols {
+		if col == colIndex {
+			collectionIndex = i
+		}
+	}
+	if -1 == collectionIndex {
+		return nil, errors.New("[error] not a unique column")
+	}
+	key, err := checkTypeAndEncodeByte(db.records.TableDef, colIndex, val, []byte{})
+	if err != nil {
+		return nil, err
+	}
+	it, err := db.uniqueColumnsTree[collectionIndex].Find(key)
+	if err != nil {
+		return nil, err
+	}
+	if it == nil {
+		return nil, errors.New("[error] value not found")
+	}
+	fmt.Println(db.records.TableDef.Types[0])
+	if db.records.TableDef.Types[0] == TYPE_INT64 {
+		return db.PKeyQuery(int(binary.LittleEndian.Uint64(it.Value)))
+		// fmt.Println()
+	}
+	return db.PKeyQuery(it.Value)
+}
+
 func (db *DB) Close() {
-	fmt.Println(db.records.TableDef)
+	// fmt.Println(db.records.TableDef)
 	db.records.Close()
 }
 func checkTypeAndDecodeCol(tD *TableDef, colIndex int, buf []byte) (any, int) {
@@ -91,19 +150,19 @@ func checkTypeAndDecodeCol(tD *TableDef, colIndex int, buf []byte) (any, int) {
 	}
 }
 func checkTypeAndEncodeByte(tD *TableDef, colIndex int, val any, buf []byte) ([]byte, error) {
-	switch val.(type) {
+	switch data := val.(type) {
 	case int:
 		if tD.Types[colIndex] != TYPE_INT64 {
 			return nil, errors.New("[Error]:wrong type for coloumn: " + tD.Cols[colIndex])
 		}
-		buf = utils.AddInt(buf, val.(int))
+		buf = utils.AddInt(buf, data)
 	case []byte:
 		if tD.Types[colIndex] != TYPE_BYTE {
 			return nil, errors.New("[Error]:wrong type for coloumn: " + tD.Cols[colIndex])
 		}
-		buf = utils.AddByte(buf, val.([]byte))
+		buf = utils.AddByte(buf, data)
 	default:
-		fmt.Println(val)
+		fmt.Println("Data Type: ", val)
 		return nil, errors.New("[Error]:wrong data type passed to function")
 	}
 	return buf, nil

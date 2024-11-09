@@ -65,6 +65,7 @@ func DalCreate(path string, options *Options) (*DAL, error) {
 		}
 		fmt.Println(dal.Root)
 		dal.freeList = freeList
+
 	} else if errors.Is(err, os.ErrNotExist) {
 		fmt.Println("Creating new Database")
 		_, err := os.Stat("./db/")
@@ -85,6 +86,13 @@ func DalCreate(path string, options *Options) (*DAL, error) {
 		if _, err := dal.Writefreelist(); err != nil {
 			return nil, err
 		}
+		// dal.TableDefPage = dal.GetNextPage()
+		// // Init node
+		// tempNode := NodeCreate()
+		// tempNode.Pagenum = dal.GetNextPage()
+		// cNode, err := dal.Writenode(tempNode)
+		// if err != nil {
+		// 	return nil, err
 
 		// // Init node
 		// tempNode := NodeCreate()
@@ -103,7 +111,7 @@ func DalCreate(path string, options *Options) (*DAL, error) {
 		if _, err := dal.Writemeta(dal.Meta); err != nil {
 			return nil, err
 		}
-
+		fmt.Println("New Database: ", dal.Root, dal.TableDefPage, dal.freelistPage)
 	} else {
 		return nil, err
 	}

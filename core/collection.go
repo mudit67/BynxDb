@@ -33,14 +33,21 @@ func CollectionCreate(name []byte, tD *TableDef) (*Collection, error) {
 	c.DAL = dal
 	// fmt.Println(c.DAL.TableDefPage)
 	if c.DAL.TableDefPage != 0 {
+		fmt.Println("Old table def: ", c.DAL.TableDefPage)
 		tableDefPage, err := c.DAL.Readpage(c.DAL.TableDefPage)
 		if err != nil {
 			fmt.Println("Error in reading tableDef")
 			return nil, err
 		}
+		c.TableDef = &TableDef{}
 		c.TableDef.Deserialize(tableDefPage.Data)
-		fmt.Println("Table Def:", c.TableDef)
 	} else {
+		for i := range tD.UniqueCols {
+			if tD.UniqueCols[i] == tD.PKeyIndex {
+				tD.UniqueCols = append(tD.UniqueCols[:i], tD.UniqueCols[i+1:]...)
+				break
+			}
+		}
 		if tD.PKeyIndex != 0 {
 			tD.Cols[tD.PKeyIndex], tD.Cols[0] = tD.Cols[0], tD.Cols[tD.PKeyIndex]
 			tD.Types[tD.PKeyIndex], tD.Types[0] = tD.Types[0], tD.Types[tD.PKeyIndex]
@@ -57,6 +64,7 @@ func CollectionCreate(name []byte, tD *TableDef) (*Collection, error) {
 	tD.PKeyIndex = 0
 	c.root = c.DAL.Root
 	// c.DAL.Writepage()
+	fmt.Println(c.TableDef)
 	return c, nil
 }
 
@@ -69,6 +77,8 @@ func (c *Collection) Close() {
 // TODO: Add ancestorsIndexs
 
 func (c *Collection) Find(key []byte) (*Item, error) {
+
+	fmt.Println("Search for Key: ", key)
 	root, err := c.DAL.Getnode(c.root)
 	if err != nil {
 		return nil, err
