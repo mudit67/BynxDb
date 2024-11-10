@@ -42,7 +42,7 @@ type DAL struct {
 func DalCreate(path string, options *Options) (*DAL, error) {
 	dal := &DAL{Meta: newMetaPage(), pageSize: options.PageSize, MinFillPercent: options.MinFillPercent, MaxFillPercent: options.MaxFillPercent}
 	if _, err := os.Stat(path); err == nil {
-		// If a database exists
+		// * If a database exists
 		fmt.Println("Database Exists")
 		dal.file, err = os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0666)
 		if err != nil {
@@ -86,28 +86,6 @@ func DalCreate(path string, options *Options) (*DAL, error) {
 		if _, err := dal.Writefreelist(); err != nil {
 			return nil, err
 		}
-		// dal.TableDefPage = dal.GetNextPage()
-		// // Init node
-		// tempNode := NodeCreate()
-		// tempNode.Pagenum = dal.GetNextPage()
-		// cNode, err := dal.Writenode(tempNode)
-		// if err != nil {
-		// 	return nil, err
-
-		// // Init node
-		// tempNode := NodeCreate()
-		// tempNode.Pagenum = dal.GetNextPage()
-		// cNode, err := dal.Writenode(tempNode)
-		// if err != nil {
-		// 	return nil, err
-
-		// }
-		// dal.Root = cNode.Pagenum
-
-		// TableDef page
-
-		// dal.TableDefPage = dal.GetNextPage()
-
 		if _, err := dal.Writemeta(dal.Meta); err != nil {
 			return nil, err
 		}
@@ -131,7 +109,7 @@ func (d *DAL) Close() error {
 
 // * Page Auxi Functions
 
-// Allocate space in memort the size of a page in disk
+// * Allocate space in memort the size of a page in disk
 func (d *DAL) Allocateemptypage() *page {
 	return &page{
 		Data: make([]byte, d.pageSize),
@@ -185,7 +163,6 @@ func (d *DAL) Readmeta() (*Meta, error) {
 func (d *DAL) Writefreelist() (*page, error) {
 	p := d.Allocateemptypage()
 	p.Num = d.freelistPage
-	// fmt.Println("p.Data: ", p.Data)
 	d.freeList.serialize(p.Data)
 
 	if err := d.Writepage(p); err != nil {
@@ -271,7 +248,7 @@ func (d *DAL) isUnderPopulated(node *Node) bool {
 	return float32(node.nodeSize()) < d.minThreshold()
 }
 
-// Return the index + 1 of the Item till which the minThreshold of a nodeSize hold true.
+// * Return the index + 1 of the Item till which the minThreshold of a nodeSize hold true.
 func (d *DAL) getSplitIndex(node *Node) int {
 	size := nodeHeaderSize
 

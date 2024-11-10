@@ -37,22 +37,6 @@ func main() {
 		fmt.Println(err)
 	}
 
-	// row, err := db.PKeyQuery(4)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
-	// for _, cols := range row {
-	// 	fmt.Println(string(cols.([]byte)))
-	// }
-
-	// row, err := db.PointQueryUniqueCol(3, []byte("yash@gmail.com"))
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
-	// for _, cols := range row {
-	// 	fmt.Println(string(cols.([]byte)))
-	// }
-
 	rows, err := db.PointQuery(2, []byte("Software"))
 	if err != nil {
 		fmt.Println(err)
@@ -62,21 +46,6 @@ func main() {
 		printRow(row)
 	}
 	db.Close()
-
-	// col, _ := core.CollectionCreate([]byte("check"), &core.TableDef{})
-
-	// _ = col.Put([]byte("Key1"), []byte("Value1"))
-	// _ = col.Put([]byte("Key2"), []byte("Value2"))
-	// _ = col.Put([]byte("Key3"), []byte("Unnat"))
-	// _ = col.Put([]byte("Key4"), []byte("Mudit"))
-	// _ = col.Put([]byte("Key5"), []byte("Value5"))
-	// _ = col.Put([]byte("Key6"), []byte("Value6"))
-
-	// col.Find([]byte("check"))
-	// col.Find([]byte("Key4"))
-	// it, _ := col.Find([]byte("Key3"))
-	// fmt.Println(it)
-	// col.Close()
 }
 
 func printRow(row []any) {

@@ -12,7 +12,6 @@ import (
 type DB struct {
 	records           *Collection
 	uniqueColumnsTree []*Collection
-	// index   []*Collection
 }
 
 func DbInit(name string, tD *TableDef) (*DB, error) {
@@ -39,7 +38,6 @@ func DbInit(name string, tD *TableDef) (*DB, error) {
 }
 
 func (db *DB) Insert(valuesToInsert ...any) error {
-	// fmt.Println("Inserting: ", valuesToInsert)
 	if len(valuesToInsert) != len(db.records.TableDef.Cols) {
 		return errors.New("[Error]:too few or too many columns")
 	}
@@ -56,7 +54,6 @@ func (db *DB) Insert(valuesToInsert ...any) error {
 			return err
 		}
 	}
-	// fmt.Println(string(value))
 	for i, col := range db.records.UniqueCols {
 		indexCollection := db.uniqueColumnsTree[i]
 		indexKey, err := checkTypeAndEncodeByte(db.records.TableDef, col, valuesToInsert[col], []byte{})
@@ -88,7 +85,6 @@ func (db *DB) PKeyQuery(val any) ([]any, error) {
 	if it == nil {
 		return nil, errors.New("[error] row not found")
 	}
-	// fmt.Println(it)
 	return decodeRow(db.records.TableDef, it.Value), nil
 }
 
@@ -146,19 +142,16 @@ func (db *DB) PointQueryUniqueCol(colIndex int, val any) ([]any, error) {
 	fmt.Println(db.records.TableDef.Types[0])
 	if db.records.TableDef.Types[0] == TYPE_INT64 {
 		return db.PKeyQuery(int(binary.LittleEndian.Uint64(it.Value)))
-		// fmt.Println()
 	}
 	return db.PKeyQuery(it.Value)
 }
 
 func (db *DB) Close() {
-	// fmt.Println(db.records.TableDef)
+	for _, uniqueTree := range db.uniqueColumnsTree {
+		uniqueTree.Close()
+	}
 	db.records.Close()
 }
-
-// func filterRow(tD *TableDef, cols []any, colIndex int, val any) bool {
-
-// }
 
 func decodeRow(tD *TableDef, buf []byte) []any {
 	var row []any

@@ -31,7 +31,6 @@ func CollectionCreate(name []byte, tD *TableDef) (*Collection, error) {
 		os.Exit(1)
 	}
 	c.DAL = dal
-	// fmt.Println(c.DAL.TableDefPage)
 	if c.DAL.TableDefPage != 0 {
 		fmt.Println("Old table def: ", c.DAL.TableDefPage)
 		tableDefPage, err := c.DAL.Readpage(c.DAL.TableDefPage)
@@ -63,7 +62,6 @@ func CollectionCreate(name []byte, tD *TableDef) (*Collection, error) {
 	}
 	tD.PKeyIndex = 0
 	c.root = c.DAL.Root
-	// c.DAL.Writepage()
 	fmt.Println(c.TableDef)
 	return c, nil
 }
@@ -144,8 +142,6 @@ func (c *Collection) Put(key []byte, value []byte) error {
 	}
 
 	if nodeToInsertIn.Items != nil && insertionIndex < len(nodeToInsertIn.Items) && bytes.Equal(nodeToInsertIn.Items[insertionIndex].Key, key) {
-		// nodeToInsertIn.Items[insertionIndex] = i
-		// fmt.Println(key, value)
 		return errors.New("[Error]:this key already excists in the key-value store")
 	} else {
 		nodeToInsertIn.addItem(i, insertionIndex)
@@ -159,7 +155,7 @@ func (c *Collection) Put(key []byte, value []byte) error {
 		return err
 	}
 
-	// Handle rebalancing
+	// * Handle rebalancing
 	for i := len(ancestors) - 2; i >= 0; i-- {
 		pnode := ancestors[i]
 		node := ancestors[i+1]
@@ -201,11 +197,11 @@ func (c *Collection) GetNodes(indexes []int) ([]*Node, error) {
 	return nodes, nil
 }
 
-// Remove removes a key from the tree. It finds the correct node and the index to remove the item from and removes it.
-// When performing the search, the ancestors are returned as well. This way we can iterate over them to check which
-// nodes were modified and rebalance by rotating or merging the unbalanced nodes. Rotation is done first. If the
-// siblings don't have enough items, then merging occurs. If the root is without items after a split, then the root is
-// removed and the tree is one level shorter.
+// * Remove removes a key from the tree. It finds the correct node and the index to remove the item from and removes it.
+// * When performing the search, the ancestors are returned as well. This way we can iterate over them to check which
+// * nodes were modified and rebalance by rotating or merging the unbalanced nodes. Rotation is done first. If the
+// * siblings don't have enough items, then merging occurs. If the root is without items after a split, then the root is
+// * removed and the tree is one level shorter.
 func (c *Collection) Remove(key []byte) error {
 	rootNode, err := c.DAL.Getnode(c.root)
 	if err != nil {
@@ -232,7 +228,7 @@ func (c *Collection) Remove(key []byte) error {
 	if err != nil {
 		return err
 	}
-	// Rebalance the nodes all the way up. Start From one node before the last and go all the way up. Exclude root.
+	// * Rebalance the nodes all the way up. Start From one node before the last and go all the way up. Exclude root.
 	for i := len(ancestors) - 2; i >= 0; i-- {
 		pNode := ancestors[i]
 		aNode := ancestors[i+1]
@@ -245,7 +241,7 @@ func (c *Collection) Remove(key []byte) error {
 	}
 
 	rootNode = ancestors[0]
-	// If the root has no items after rebalancing, there's no need to save it because we ignore it.
+	// * If the root has no items after rebalancing, there's no need to save it because we ignore it.
 	if len(rootNode.Items) == 0 && len(rootNode.Childnodes) > 0 {
 		c.root = ancestors[1].Pagenum
 	}

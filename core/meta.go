@@ -6,7 +6,7 @@ const (
 	metaPageNum = 0
 )
 
-// Meta is the Meta page of the db
+// * Meta is the Meta page of the db
 type Meta struct {
 	Root         pgNum
 	freelistPage pgNum

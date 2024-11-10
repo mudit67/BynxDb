@@ -14,36 +14,20 @@ type TableDef struct {
 	Types     []uint16
 	Cols      []string
 	PKeyIndex int //Starting with 0/
-	/* Indices of columns that have the contraint of being unique.	This tells the database to create a index Tree for that specific column. Starts with 0 */
+	/*
+	*  Indices of columns that have the contraint of being unique.	This tells the database to create a index Tree for that specific column. Starts with 0
+	 */
 	UniqueCols []int
-	// TableDefPage pgNum
-	// RootBtree    pgNum
 }
-
-// type Cell struct {
-// 	Type uint16
-// 	i64  int64
-// 	str  []byte
-// }
-
-// type Record struct {
-// 	Cols []string
-// 	vals []Cell
-// }
 
 func (tD *TableDef) Serialize(buf []byte) []byte {
 	/*
-		| Total Number of Columns | Columns' Types | Columns' Names | Number of Unique Columns | Indices of Unique Columns |
-	*/
+	*	| Total Number of Columns | Columns' Types | Columns' Names | Number of Unique Columns | Indices of Unique Columns |
+	 */
 	leftPos := 0
 	numOfCol := len(tD.Cols)
 	binary.LittleEndian.PutUint16(buf[leftPos:], uint16(numOfCol))
 	leftPos += 2
-	// binary.LittleEndian.PutUint64(buf[leftPos:], uint64(tD.RootBtree))
-	// leftPos += pageNumSize
-	// binary.LittleEndian.PutUint64(buf[leftPos:], uint64(tD.TableDefPage))
-	// leftPos += pageNumSize
-
 	for _, typ := range tD.Types {
 		binary.LittleEndian.PutUint16(buf[leftPos:], uint16(typ))
 		leftPos += 2
