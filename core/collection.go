@@ -230,10 +230,10 @@ func (c *Collection) GetNodes(indexes []int) ([]*Node, error) {
 
 // * Remove removes a key from the tree. It finds the correct node and the index to remove the item from and removes it.
 // * When performing the search, the ancestors are returned as well. This way we can iterate over them to check which
-// * nodes were modified and rebalance by rotating or merging the unbalanced nodes. Rotation is done first. If the
-// * siblings don't have enough items, then merging occurs. If the root is without items after a split, then the root is
-// * removed and the tree is one level shorter.
 func (c *Collection) Remove(key []byte) error {
+	// * nodes were modified and rebalance by rotating or merging the unbalanced nodes. Rotation is done first. If the
+	// * siblings don't have enough items, then merging occurs. If the root is without items after a split, then the root is
+	// * removed and the tree is one level shorter.
 	rootNode, err := c.DAL.Getnode(c.root)
 	if err != nil {
 		return nil

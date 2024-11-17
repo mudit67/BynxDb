@@ -190,6 +190,57 @@ func (db *DB) RangeQuery(colIndex int, low any, high any) ([][]any, error) {
 	return rows, nil
 }
 
+func (db *DB) Delete(colIndex int, val any) error {
+	key, err := checkTypeAndEncodeByte(db.records.TableDef, colIndex, val, []byte{})
+	if colIndex == 0 {
+		if err != nil {
+			return err
+		}
+		return db.records.Remove(key)
+	} else {
+		// Check unique column
+		// uniqueCollectionIndex := -1
+		for i, col := range db.records.UniqueCols {
+			if col == colIndex {
+				item, err := db.uniqueColumnsTree[i].Find(key)
+				if err != nil {
+					return err
+				}
+				if item == nil {
+					return errors.New("value not found")
+				}
+				return db.records.Remove(item.Value)
+			}
+		}
+		// non-unique column
+		items, err := db.records.FetchAll(0)
+		if err != nil {
+			return nil
+		}
+		if len(items) == 0 {
+			return errors.New("value not found")
+		}
+		for _, item := range items {
+			row := decodeRow(db.records.TableDef, item.Value)
+			switch col := row[colIndex-1].(type) {
+			case int:
+				if col == val {
+					if err := db.records.Remove(item.Key); err != nil {
+						return err
+					}
+				}
+			case []byte:
+				if bytes.Equal(col, key) {
+					if err := db.records.Remove(item.Key); err != nil {
+						return err
+					}
+				}
+			}
+		}
+		return nil
+	}
+}
+
 func (db *DB) Close() {
 	for _, uniqueTree := range db.uniqueColumnsTree {
 		uniqueTree.Close()
