@@ -76,7 +76,7 @@ func (c *Collection) Close() {
 
 func (c *Collection) Find(key []byte) (*Item, error) {
 
-	fmt.Println("Search for Key: ", key)
+	// fmt.Println("Search for Key: ", key)
 	root, err := c.DAL.Getnode(c.root)
 	if err != nil {
 		return nil, err
@@ -110,6 +110,37 @@ func (c *Collection) FetchAll(pageNum pgNum) ([]*Item, error) {
 			items = append(items, subItems...)
 		}
 	}
+	return items, nil
+}
+
+func (c *Collection) FindInBetween(low []byte, high []byte) ([]*Item, error) {
+	fmt.Println("-- Range query --")
+	root, err := c.DAL.Getnode(c.root)
+	if err != nil {
+		return nil, err
+	}
+
+	items := []*Item{}
+
+	lowIndex, containingNode, _, err := root.Findkey(low, false)
+	if err != nil {
+		return nil, err
+	}
+	if bytes.Equal(containingNode.Items[lowIndex].Key, low) {
+		items = append(items, containingNode.Items[lowIndex])
+	}
+	sameNode, highIndex := containingNode.Findkeyinnode(high)
+	// Case 1:  High key is in the same node
+	if sameNode {
+		items = append(items, containingNode.Items[highIndex])
+		fmt.Println(containingNode.Items[lowIndex])
+	}
+	fmt.Println(lowIndex, containingNode, containingNode.Pagenum)
+	for _, it := range containingNode.Items {
+		fmt.Println(it.Key)
+	}
+	// fmt.Println(sameNode, containingNode.Items[0].Key, containingNode.Items[1].Key)
+
 	return items, nil
 }
 

@@ -251,12 +251,16 @@ func (d *DAL) isUnderPopulated(node *Node) bool {
 // * Return the index + 1 of the Item till which the minThreshold of a nodeSize hold true.
 func (d *DAL) getSplitIndex(node *Node) int {
 	size := nodeHeaderSize
-
+	mindThres := d.minThreshold()
 	for i := range node.Items {
 		size += node.elementSize(i)
 
-		if float32(size) > d.minThreshold() && i < len(node.Items)-1 {
-			return i + 1
+		if float32(size) > mindThres {
+			if i < len(node.Items)-1 {
+				return i + 1
+			} else {
+				return len(node.Items) - 2
+			}
 		}
 	}
 	return -1
