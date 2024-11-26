@@ -39,7 +39,7 @@ func (fL *freeList) serialize(buf []byte) []byte {
 
 	pos += 2
 
-	// Released page count
+	// * Released page count
 	binary.LittleEndian.PutUint16(buf[pos:], uint16(len(fL.releasedPages)))
 	pos += 2
 

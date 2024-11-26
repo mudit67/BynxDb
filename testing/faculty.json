@@ -1,0 +1,27 @@
+{
+  "cols": ["ID", "Name", "Cabin", "Department_ID"],
+  "types": [1, 2, 1, 1],
+  "unique": [2],
+  "records": [
+    [1, "Alice Johnson", 101, 1],
+    [2, "Bob Smith", 102, 2],
+    [3, "Charlie Brown", 103, 1],
+    [4, "David Lee", 104, 3],
+    [5, "Emily Wilson", 105, 2],
+    [6, "Frank Miller", 106, 1],
+    [7, "Grace Kelly", 107, 3],
+    [8, "Henry Ford", 108, 2],
+    [9, "Isabella Jones", 109, 1],
+    [10, "Jack Daniels", 110, 3],
+    [11, "Kate Winslet", 111, 2],
+    [12, "Leo DiCaprio", 112, 1],
+    [13, "Mia Wallace", 113, 3],
+    [14, "Noah Centineo", 114, 2],
+    [15, "Olivia Wilde", 115, 1],
+    [16, "Peter Parker", 116, 3],
+    [17, "Queen Elizabeth", 117, 2],
+    [18, "Robert Downey Jr.", 118, 1],
+    [19, "Scarlett Johansson", 119, 3],
+    [20, "Tom Cruise", 120, 2]
+  ]
+}

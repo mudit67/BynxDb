@@ -2,35 +2,44 @@ package main
 
 import (
 	"BynxDB/core"
+	_ "BynxDB/testing"
 	"fmt"
 	"os"
 )
 
 func main() {
-	options := &core.Options{
-		PageSize:       os.Getpagesize(),
-		MinFillPercent: 0.0125,
-		MaxFillPercent: 0.025,
+	tD := &core.TableDef{
+		Cols:       []string{"ID", "Name", "Cabin", "Department_ID"},
+		Types:      []uint16{core.TYPE_INT64, core.TYPE_BYTE, core.TYPE_INT64, core.TYPE_INT64},
+		PKeyIndex:  0,
+		UniqueCols: []int{2},
 	}
-	dal, _ := core.DalCreate("./check.db", options)
 
-	c := core.CollectionCreate([]byte("collection1"), dal.Root)
-	c.DAL = dal
+	db, err := core.DbInit("faculty", tD)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	rows, err := db.SelectEntireTable()
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println("Count: ", len(rows))
+	for _, row := range rows {
+		printRow(row)
+	}
+	db.Close()
+}
 
-	_ = c.Put([]byte("Key1"), []byte("Value1"))
-	_ = c.Put([]byte("Key2"), []byte("Value2"))
-	_ = c.Put([]byte("Key3"), []byte("Unnat"))
-	_ = c.Put([]byte("Key4"), []byte("Mudit"))
-	_ = c.Put([]byte("Key5"), []byte("Value5"))
-	_ = c.Put([]byte("Key6"), []byte("Value6"))
-	item, _ := c.Find([]byte("Key1"))
-
-	fmt.Printf("key is: %s, value is: %s\n", item.Key, item.Value)
-
-	_ = c.Remove([]byte("Key1"))
-	item, _ = c.Find([]byte("Key1"))
-
-	dal.Writefreelist()
-	fmt.Printf("item is: %+v\n", item)
-	_ = dal.Close()
+func printRow(row []any) {
+	// fmt.Print(row, ": ")
+	for _, col := range row {
+		switch data := col.(type) {
+		case []byte:
+			fmt.Print(string(data), " ")
+		case int:
+			fmt.Print(data, " ")
+		}
+	}
+	fmt.Println()
 }

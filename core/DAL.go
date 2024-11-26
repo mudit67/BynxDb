@@ -34,6 +34,7 @@ type DAL struct {
 	pageSize       int
 	MinFillPercent float32
 	MaxFillPercent float32
+
 	*freeList
 	*Meta
 }
@@ -41,7 +42,7 @@ type DAL struct {
 func DalCreate(path string, options *Options) (*DAL, error) {
 	dal := &DAL{Meta: newMetaPage(), pageSize: options.PageSize, MinFillPercent: options.MinFillPercent, MaxFillPercent: options.MaxFillPercent}
 	if _, err := os.Stat(path); err == nil {
-		// If a database exists
+		// * If a database exists
 		fmt.Println("Database Exists")
 		dal.file, err = os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0666)
 		if err != nil {
@@ -62,10 +63,19 @@ func DalCreate(path string, options *Options) (*DAL, error) {
 		if err != nil {
 			return nil, err
 		}
-
+		fmt.Println(dal.Root)
 		dal.freeList = freeList
+
 	} else if errors.Is(err, os.ErrNotExist) {
 		fmt.Println("Creating new Database")
+		_, err := os.Stat("./db/")
+		if os.IsNotExist(err) {
+			err = os.Mkdir("./db/", 0777)
+			if err != nil {
+				_ = dal.Close()
+				return nil, err
+			}
+		}
 		dal.file, err = os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0666)
 		if err != nil {
 			_ = dal.Close()
@@ -76,11 +86,10 @@ func DalCreate(path string, options *Options) (*DAL, error) {
 		if _, err := dal.Writefreelist(); err != nil {
 			return nil, err
 		}
-
 		if _, err := dal.Writemeta(dal.Meta); err != nil {
 			return nil, err
 		}
-
+		fmt.Println("New Database: ", dal.Root, dal.TableDefPage, dal.freelistPage)
 	} else {
 		return nil, err
 	}
@@ -100,7 +109,7 @@ func (d *DAL) Close() error {
 
 // * Page Auxi Functions
 
-// Allocate space in memort the size of a page in disk
+// * Allocate space in memort the size of a page in disk
 func (d *DAL) Allocateemptypage() *page {
 	return &page{
 		Data: make([]byte, d.pageSize),
@@ -154,7 +163,6 @@ func (d *DAL) Readmeta() (*Meta, error) {
 func (d *DAL) Writefreelist() (*page, error) {
 	p := d.Allocateemptypage()
 	p.Num = d.freelistPage
-	// fmt.Println("p.Data: ", p.Data)
 	d.freeList.serialize(p.Data)
 
 	if err := d.Writepage(p); err != nil {
@@ -240,16 +248,20 @@ func (d *DAL) isUnderPopulated(node *Node) bool {
 	return float32(node.nodeSize()) < d.minThreshold()
 }
 
-// Return the index + 1 of the Item till which the minThreshold of a nodeSize hold true.
-func (d *DAL) getSplitIndex(node *Node) int {
+// * Return the index + 1 of the Item till which the minThreshold of a nodeSize hold true.
+func (d *DAL) getSplitIndex(node *Node, splitNec bool) int {
 	size := nodeHeaderSize
-
+	minSize := d.minThreshold()
+	fmt.Println(minSize)
 	for i := range node.Items {
 		size += node.elementSize(i)
-
-		if float32(size) > d.minThreshold() && i < len(node.Items)-1 {
+		fmt.Println(size, i)
+		if float32(size) > minSize && i < len(node.Items)-1 {
 			return i + 1
 		}
+	}
+	if splitNec && len(node.Items) == 2 {
+		return 1
 	}
 	return -1
 }
