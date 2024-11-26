@@ -115,7 +115,7 @@ func (db *DB) PointQuery(colIndex int, val any) ([][]any, error) {
 		row := decodeRow(db.records.TableDef, item.Value)
 		if db.records.TableDef.Types[colIndex] == TYPE_BYTE && bytes.Equal(row[colIndex-1].([]byte), val.([]byte)) {
 			rows = append(rows, row)
-		} else if row[colIndex-1] == val {
+		} else if db.records.TableDef.Types[colIndex] == TYPE_INT64 && row[colIndex-1] == val {
 			rows = append(rows, row)
 		}
 	}
@@ -249,7 +249,7 @@ func (db *DB) Close() {
 }
 
 func decodeRow(tD *TableDef, buf []byte) []any {
-	fmt.Println("Decoding: ", buf)
+	// fmt.Println("Decoding: ", buf)
 	var row []any
 	leftPos := 0
 	for i := 1; i < len(tD.Cols); i++ {

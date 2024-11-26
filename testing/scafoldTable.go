@@ -33,10 +33,21 @@ func init() {
 		fmt.Println(err)
 	}
 	for _, row := range table.Records {
+		fmt.Println(row)
+		for i, col := range row {
+			switch data := col.(type) {
+			case float64:
+				row[i] = int(data)
+			case string:
+				row[i] = []byte(data)
+			}
+			fmt.Printf("%d: %T\n", i, row[i])
+		}
 		err := db.Insert(row...)
 		if err != nil {
 			panic(err)
 		}
 	}
+	db.Close()
 	fmt.Println("-- End Test --")
 }

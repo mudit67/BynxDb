@@ -278,6 +278,7 @@ func (parentNode *Node) split(nodeToSplit *Node, nodeToSplitIndex int) {
 // * Deletion Auxi Functions
 
 func (n *Node) canSpareAnElement() bool {
+	// TODO: Don't use getSplitIndex here
 	splitIndex := n.getSplitIndex(n)
 	return splitIndex != -1
 }

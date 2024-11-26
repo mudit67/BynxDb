@@ -2,7 +2,7 @@ package main
 
 import (
 	"BynxDB/core"
-	// _ "BynxDB/testing"
+	_ "BynxDB/testing"
 	"fmt"
 	"os"
 )
@@ -21,14 +21,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// for _, row := range data {
-	// 	if err := db.Insert(row...); err != nil {
-	// 		fmt.Println(row)
-	// 		fmt.Println(err)
-	// 	}
-	// }
-
-	rows, err := db.RangeQuery(2, 103, 110)
+	rows, err := db.PointQuery(1, []byte("Henry Ford"))
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -70,7 +63,6 @@ func printRow(row []any) {
 		case int:
 			fmt.Print(data, " ")
 		}
-
 	}
 	fmt.Println()
 }

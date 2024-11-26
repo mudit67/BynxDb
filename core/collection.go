@@ -192,6 +192,7 @@ func (c *Collection) Put(key []byte, value []byte) error {
 		node := ancestors[i+1]
 		nodeIndex := ancestorsIndexes[i+1]
 		if node.isOverPopulated() {
+			fmt.Println("Calling split on: ", len(node.Items))
 			pnode.split(node, nodeIndex)
 		}
 	}
@@ -199,6 +200,7 @@ func (c *Collection) Put(key []byte, value []byte) error {
 	rootNode := ancestors[0]
 	if rootNode.isOverPopulated() {
 		newNode := c.DAL.nodeCreate([]*Item{}, []pgNum{rootNode.Pagenum})
+		fmt.Println("Calling split on: ", len(rootNode.Items))
 		newNode.split(rootNode, 0)
 		newRoot, err := c.DAL.Writenode(newNode)
 		if err != nil {
