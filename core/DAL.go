@@ -249,7 +249,7 @@ func (d *DAL) isUnderPopulated(node *Node) bool {
 }
 
 // * Return the index + 1 of the Item till which the minThreshold of a nodeSize hold true.
-func (d *DAL) getSplitIndex(node *Node) int {
+func (d *DAL) getSplitIndex(node *Node, splitNec bool) int {
 	size := nodeHeaderSize
 	minSize := d.minThreshold()
 	fmt.Println(minSize)
@@ -260,7 +260,7 @@ func (d *DAL) getSplitIndex(node *Node) int {
 			return i + 1
 		}
 	}
-	if len(node.Items) == 2 {
+	if splitNec && len(node.Items) == 2 {
 		return 1
 	}
 	return -1

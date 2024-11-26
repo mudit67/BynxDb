@@ -45,7 +45,8 @@ func init() {
 		}
 		err := db.Insert(row...)
 		if err != nil {
-			panic(err)
+			// panic(err)
+			fmt.Println(err)
 		}
 	}
 	db.Close()

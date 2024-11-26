@@ -247,7 +247,7 @@ func (parentNode *Node) split(nodeToSplit *Node, nodeToSplitIndex int) {
 	//*		      /        \           ------>       /          |          \
 	//*		   a           modifiedNode            a       modifiedNode     newNode
 	//*	  1,2                 4,5,6,7,8            1,2          4,5         7,8
-	splitIndex := parentNode.DAL.getSplitIndex(nodeToSplit)
+	splitIndex := parentNode.DAL.getSplitIndex(nodeToSplit, true)
 
 	middleItem := nodeToSplit.Items[splitIndex]
 	var newNode *Node
@@ -278,8 +278,7 @@ func (parentNode *Node) split(nodeToSplit *Node, nodeToSplitIndex int) {
 // * Deletion Auxi Functions
 
 func (n *Node) canSpareAnElement() bool {
-	// TODO: Don't use getSplitIndex here
-	splitIndex := n.getSplitIndex(n)
+	splitIndex := n.getSplitIndex(n, false)
 	return splitIndex != -1
 }
 

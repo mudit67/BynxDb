@@ -89,7 +89,10 @@ func (db *DB) PKeyQuery(val any) ([]any, error) {
 	if it == nil {
 		return nil, errors.New("[error] row not found")
 	}
-	return decodeRow(db.records.TableDef, it.Value), nil
+	row := decodeRow(db.records.TableDef, it.Value)
+
+	row = append([]any{val}, row...)
+	return row, nil
 }
 
 func (db *DB) PointQuery(colIndex int, val any) ([][]any, error) {
@@ -114,8 +117,12 @@ func (db *DB) PointQuery(colIndex int, val any) ([][]any, error) {
 	for _, item := range items {
 		row := decodeRow(db.records.TableDef, item.Value)
 		if db.records.TableDef.Types[colIndex] == TYPE_BYTE && bytes.Equal(row[colIndex-1].([]byte), val.([]byte)) {
+			itKey, _ := checkTypeAndDecodeCol(db.records.TableDef, 0, item.Key)
+			row = append([]any{itKey}, row...)
 			rows = append(rows, row)
 		} else if db.records.TableDef.Types[colIndex] == TYPE_INT64 && row[colIndex-1] == val {
+			itKey, _ := checkTypeAndDecodeCol(db.records.TableDef, 0, item.Key)
+			row = append([]any{itKey}, row...)
 			rows = append(rows, row)
 		}
 	}
@@ -149,6 +156,8 @@ func (db *DB) SelectEntireTable() ([][]any, error) {
 	var rows [][]any
 	for _, item := range items {
 		row := decodeRow(db.records.TableDef, item.Value)
+		itKey, _ := checkTypeAndDecodeCol(db.records.TableDef, 0, item.Key)
+		row = append([]any{itKey}, row...)
 		rows = append(rows, row)
 	}
 	return rows, nil
@@ -182,8 +191,10 @@ func (db *DB) RangeQuery(colIndex int, low any, high any) ([][]any, error) {
 		}
 		lowCom := bytes.Compare(lowKey, keyToCom)
 		highCom := bytes.Compare(highKey, keyToCom)
-		fmt.Println(lowCom, highCom, keyToCom)
+		// fmt.Println(lowCom, highCom, keyToCom)
 		if lowCom <= 0 && highCom >= 0 {
+			itKey, _ := checkTypeAndDecodeCol(db.records.TableDef, 0, item.Key)
+			row = append([]any{itKey}, row...)
 			rows = append(rows, row)
 		}
 	}
@@ -191,14 +202,29 @@ func (db *DB) RangeQuery(colIndex int, low any, high any) ([][]any, error) {
 }
 
 func (db *DB) Delete(colIndex int, val any) error {
+	fmt.Println("Deleting: ", val, " In column: ", colIndex)
 	key, err := checkTypeAndEncodeByte(db.records.TableDef, colIndex, val, []byte{})
+	// * Primary key column
 	if colIndex == 0 {
 		if err != nil {
 			return err
 		}
+		if len(db.uniqueColumnsTree) != 0 {
+			rowToDel, err := db.PKeyQuery(val)
+			if err != nil {
+				return err
+			}
+			for i, uniqueColIndex := range db.records.UniqueCols {
+				keyToDel, _ := checkTypeAndEncodeByte(db.records.TableDef, uniqueColIndex, rowToDel[uniqueColIndex-1], []byte{})
+				err := db.uniqueColumnsTree[i].Remove(keyToDel)
+				if err != nil {
+					return err
+				}
+			}
+		}
 		return db.records.Remove(key)
 	} else {
-		// Check unique column
+		// * Check unique column
 		// uniqueCollectionIndex := -1
 		for i, col := range db.records.UniqueCols {
 			if col == colIndex {
@@ -209,32 +235,29 @@ func (db *DB) Delete(colIndex int, val any) error {
 				if item == nil {
 					return errors.New("value not found")
 				}
-				return db.records.Remove(item.Value)
+				pKey, _ := checkTypeAndDecodeCol(db.records.TableDef, 0, item.Value)
+				return db.Delete(0, pKey)
 			}
 		}
-		// non-unique column
-		items, err := db.records.FetchAll(0)
+		// * non-unique column
+		rows, err := db.PointQuery(colIndex, val)
 		if err != nil {
-			return nil
+			return err
 		}
-		if len(items) == 0 {
-			return errors.New("value not found")
-		}
-		for _, item := range items {
-			row := decodeRow(db.records.TableDef, item.Value)
-			switch col := row[colIndex-1].(type) {
-			case int:
-				if col == val {
-					if err := db.records.Remove(item.Key); err != nil {
-						return err
-					}
+		fmt.Println("Rows to delete: ", len(rows))
+		for _, row := range rows {
+			fmt.Println("Deleting: ", row)
+			for i, uniqueColIndex := range db.records.UniqueCols {
+				colKeyToDel, _ := checkTypeAndEncodeByte(db.records.TableDef, uniqueColIndex, row[uniqueColIndex], []byte{})
+				err := db.uniqueColumnsTree[i].Remove(colKeyToDel)
+				if err != nil {
+					return err
 				}
-			case []byte:
-				if bytes.Equal(col, key) {
-					if err := db.records.Remove(item.Key); err != nil {
-						return err
-					}
-				}
+			}
+			pKey, _ := checkTypeAndEncodeByte(db.records.TableDef, 0, row[0], []byte{})
+			err := db.records.Remove(pKey)
+			if err != nil {
+				return err
 			}
 		}
 		return nil
