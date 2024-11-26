@@ -144,13 +144,16 @@ func (c *Collection) FindInBetween(low []byte, high []byte) ([]*Item, error) {
 	return items, nil
 }
 
-func (c *Collection) Put(key []byte, value []byte) error {
+func (c *Collection) Put(key []byte, value []byte, update bool) error {
 	i := ItemCreate(key, value)
 
 	var root *Node
 	var err error
 
 	if c.root == 0 {
+		if update {
+			return errors.New("[error] no data in the table")
+		}
 		fmt.Println("Creating new root")
 		nodeTemp := c.DAL.nodeCreate([]*Item{i}, []pgNum{})
 		root, err = c.DAL.Writenode(nodeTemp)
@@ -172,8 +175,15 @@ func (c *Collection) Put(key []byte, value []byte) error {
 		return err
 	}
 
+	if update && (nodeToInsertIn == nil) {
+		return errors.New("[error] row not found")
+	}
+
 	if nodeToInsertIn.Items != nil && insertionIndex < len(nodeToInsertIn.Items) && bytes.Equal(nodeToInsertIn.Items[insertionIndex].Key, key) {
-		return errors.New("[Error]:this key already excists in the key-value store")
+		if !update {
+			return errors.New("[error] this key already excists in the key-value store")
+		}
+		nodeToInsertIn.Items[insertionIndex] = i
 	} else {
 		nodeToInsertIn.addItem(i, insertionIndex)
 	}

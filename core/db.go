@@ -64,12 +64,12 @@ func (db *DB) Insert(valuesToInsert ...any) error {
 		if err != nil {
 			return err
 		}
-		err = indexCollection.Put(indexKey, pKey)
+		err = indexCollection.Put(indexKey, pKey, false)
 		if err != nil {
 			return err
 		}
 	}
-	err = db.records.Put(pKey, value)
+	err = db.records.Put(pKey, value, false)
 	if err != nil {
 		return err
 	}
@@ -199,6 +199,48 @@ func (db *DB) RangeQuery(colIndex int, low any, high any) ([][]any, error) {
 		}
 	}
 	return rows, nil
+}
+
+func (db *DB) UpdatePoint(colIndex int, valToChange any, newVal any) error {
+	rowsToUpdate, err := db.PointQuery(colIndex, valToChange)
+	if err != nil {
+		return err
+	}
+	if rowsToUpdate == nil || len(rowsToUpdate) == 0 {
+		return errors.New("no row found to update")
+	}
+	for ind := range rowsToUpdate {
+		rowsToUpdate[ind][colIndex] = newVal
+
+		pKey := make([]byte, 0)
+		value := make([]byte, 0)
+		pKey, err = checkTypeAndEncodeByte(db.records.TableDef, 0, rowsToUpdate[ind][0], pKey)
+		if err != nil {
+			return err
+		}
+		for i := 1; i < len(rowsToUpdate[ind]); i++ {
+			value, err = checkTypeAndEncodeByte(db.records.TableDef, i, rowsToUpdate[ind][i], value)
+			if err != nil {
+				return err
+			}
+		}
+		for i, col := range db.records.UniqueCols {
+			indexCollection := db.uniqueColumnsTree[i]
+			indexKey, err := checkTypeAndEncodeByte(db.records.TableDef, col, rowsToUpdate[ind][col], []byte{})
+			if err != nil {
+				return err
+			}
+			err = indexCollection.Put(indexKey, pKey, true)
+			if err != nil {
+				return err
+			}
+		}
+		err = db.records.Put(pKey, value, true)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (db *DB) Delete(colIndex int, val any) error {

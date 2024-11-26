@@ -20,11 +20,7 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	err = db.Delete(3, 1)
-	if err != nil {
-		fmt.Println(err)
-	}
-	rows, err := db.RangeQuery(2, 104, 110)
+	rows, err := db.SelectEntireTable()
 	if err != nil {
 		fmt.Println(err)
 	}
