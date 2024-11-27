@@ -1,35 +1,19 @@
 package main
 
 import (
-	"BynxDB/core"
-	_ "BynxDB/testing"
-	"fmt"
-	"os"
+	// _ "BynxDB/testing"
+	"BynxDB/utils"
 )
 
 func main() {
-	tD := &core.TableDef{
-		Cols:       []string{"ID", "Name", "Cabin", "Department_ID"},
-		Types:      []uint16{core.TYPE_INT64, core.TYPE_BYTE, core.TYPE_INT64, core.TYPE_INT64},
-		PKeyIndex:  0,
-		UniqueCols: []int{2},
-	}
-
-	db, err := core.DbInit("faculty", tD)
+	db, err := utils.TableInit()
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		panic(err)
 	}
-	rows, err := db.SelectEntireTable()
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println("Count: ", len(rows))
-	for _, row := range rows {
-		printRow(row)
-	}
-	db.Close()
+	utils.ProcessQueries(db)
 }
+
+/*
 
 func printRow(row []any) {
 	// fmt.Print(row, ": ")
@@ -43,3 +27,4 @@ func printRow(row []any) {
 	}
 	fmt.Println()
 }
+*/
