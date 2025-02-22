@@ -10,10 +10,10 @@ I implemented a Data Access Layer (DAL) which is responsible for dividing the da
 ### B Trees for Indexing
 I chose B Trees because they're practically the industry standard for database indexes. My implementation includes:
 
-Efficient range queries
-Auto-balancing on insert/delete
-Disk-friendly node structure
-Configurable node size
+- Efficient range queries
+- Auto-balancing on insert/delete
+- Disk-friendly node structure
+- Configurable node size
 
 ### Learning Resources
 If you're interested in building your own database, here are some resources I found incredibly helpful:
