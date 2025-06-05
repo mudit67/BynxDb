@@ -1,6 +1,7 @@
 package core
 
 import (
+	"BynxDB/core/utils"
 	"errors"
 	"fmt"
 	"os"
@@ -41,9 +42,10 @@ type DAL struct {
 
 func DalCreate(path string, options *Options) (*DAL, error) {
 	dal := &DAL{Meta: newMetaPage(), pageSize: options.PageSize, MinFillPercent: options.MinFillPercent, MaxFillPercent: options.MaxFillPercent}
+	// * If a database exists
 	if _, err := os.Stat(path); err == nil {
-		// * If a database exists
-		fmt.Println("Database Exists")
+		// // fmt.println("Database Exists")
+		utils.Info(1, "Database Exists")
 		dal.file, err = os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0666)
 		if err != nil {
 			_ = dal.Close()
@@ -63,11 +65,11 @@ func DalCreate(path string, options *Options) (*DAL, error) {
 		if err != nil {
 			return nil, err
 		}
-		fmt.Println(dal.Root)
+		// // fmt.println(dal.Root)
 		dal.freeList = freeList
-
-	} else if errors.Is(err, os.ErrNotExist) {
-		fmt.Println("Creating new Database")
+		utils.Info(1, "Loaded Database: ", "Freelist: ", dal.freelistPage, "TableDef: ", dal.TableDefPage, "Root: ", dal.Root)
+	} else if errors.Is(err, os.ErrNotExist) { // *Creating Database
+		utils.Info(1, "Creating new Database")
 		_, err := os.Stat("./db/")
 		if os.IsNotExist(err) {
 			err = os.Mkdir("./db/", 0777)
@@ -89,7 +91,7 @@ func DalCreate(path string, options *Options) (*DAL, error) {
 		if _, err := dal.Writemeta(dal.Meta); err != nil {
 			return nil, err
 		}
-		fmt.Println("New Database: ", dal.Root, dal.TableDefPage, dal.freelistPage)
+		utils.Info(1, "New Database: ", "Freelist: ", dal.freelistPage, "TableDef: ", dal.TableDefPage, "Root: ", dal.Root)
 	} else {
 		return nil, err
 	}
@@ -100,7 +102,7 @@ func DalCreate(path string, options *Options) (*DAL, error) {
 func (d *DAL) Close() error {
 	if d.file != nil {
 		if err := d.file.Close(); err != nil {
-			return fmt.Errorf("could not close file: %s", err)
+			return fmt.Errorf("Could not close file: %s", err)
 		}
 		d.file = nil
 	}
@@ -128,6 +130,7 @@ func (d *DAL) Readpage(pageNum pgNum) (*page, error) {
 }
 
 func (d *DAL) Writepage(p *page) error {
+	utils.Info(4, "Writing Page: ", p.Num)
 	offset := int64(p.Num) * int64(d.pageSize)
 	_, err := d.file.WriteAt(p.Data, offset)
 	return err
@@ -135,11 +138,12 @@ func (d *DAL) Writepage(p *page) error {
 
 // * (Maintaining) Persistance Auxi Functions
 
-func (d *DAL) Writemeta(Meta *Meta) (*page, error) {
+func (d *DAL) Writemeta(metaToWrite *Meta) (*page, error) {
+	utils.Info(1, "Writing Meta: ", "Freelist: ", metaToWrite.freelistPage, "TableDef: ", metaToWrite.TableDefPage, "Root: ", metaToWrite.Root)
 	p := d.Allocateemptypage()
 	p.Num = metaPageNum
 
-	Meta.Serialize(p.Data)
+	metaToWrite.Serialize(p.Data)
 
 	if err := d.Writepage(p); err != nil {
 		return nil, err
@@ -148,7 +152,7 @@ func (d *DAL) Writemeta(Meta *Meta) (*page, error) {
 }
 
 func (d *DAL) Readmeta() (*Meta, error) {
-	fmt.Println("Reading meta page: ", metaPageNum)
+	utils.Info(1, "Reading meta page: ", metaPageNum)
 	p, err := d.Readpage(metaPageNum)
 
 	if err != nil {
@@ -164,7 +168,7 @@ func (d *DAL) Writefreelist() (*page, error) {
 	p := d.Allocateemptypage()
 	p.Num = d.freelistPage
 	d.freeList.serialize(p.Data)
-
+	utils.Info(1, "Writing Freelist: ", d.freeList.State())
 	if err := d.Writepage(p); err != nil {
 		return nil, err
 	}
@@ -174,6 +178,7 @@ func (d *DAL) Writefreelist() (*page, error) {
 }
 
 func (d *DAL) Readfreelist() (*freeList, error) {
+	utils.Info(1, "Reading Freelist.")
 	p, err := d.Readpage(d.freelistPage)
 	if err != nil {
 		return nil, err
@@ -182,7 +187,7 @@ func (d *DAL) Readfreelist() (*freeList, error) {
 	freeList := freeListCreate()
 
 	freeList.deserialize(p.Data)
-
+	utils.InfoLogAndPrint("Reading Freelist: ", freeList.State())
 	return freeList, nil
 
 }
@@ -213,6 +218,7 @@ func (d *DAL) Getnode(pageNum pgNum) (*Node, error) {
 func (d *DAL) Writenode(n *Node) (*Node, error) {
 	p := d.Allocateemptypage()
 	if n.Pagenum == 0 {
+		utils.Warn("Writing Node With 0 Pg num")
 		p.Num = d.GetNextPage()
 		n.Pagenum = p.Num
 	} else {
@@ -252,10 +258,10 @@ func (d *DAL) isUnderPopulated(node *Node) bool {
 func (d *DAL) getSplitIndex(node *Node, splitNec bool) int {
 	size := nodeHeaderSize
 	minSize := d.minThreshold()
-	fmt.Println(minSize)
+	// fmt.println(minSize)
 	for i := range node.Items {
 		size += node.elementSize(i)
-		fmt.Println(size, i)
+		// fmt.println(size, i)
 		if float32(size) > minSize && i < len(node.Items)-1 {
 			return i + 1
 		}

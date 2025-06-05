@@ -1,6 +1,7 @@
 package core
 
 import (
+	"BynxDB/core/utils"
 	"bytes"
 	"encoding/binary"
 	"fmt"
@@ -158,6 +159,7 @@ func (n *Node) Findkeyinnode(Key []byte) (bool, int) {
 	return false, len(n.Items)
 }
 func (n *Node) Findkey(Key []byte, exact bool) (int, *Node, []int, error) {
+	utils.Info(3, "Findkey: ", fmt.Sprint(Key))
 	ancestorIndexes := &[]int{0}
 	index, node, err := Findkeyhelper(n, Key, exact, ancestorIndexes)
 	if err != nil {
@@ -167,6 +169,7 @@ func (n *Node) Findkey(Key []byte, exact bool) (int, *Node, []int, error) {
 }
 
 func Findkeyhelper(n *Node, Key []byte, exact bool, ancestorIndexes *[]int) (int, *Node, error) {
+	utils.Info(3, "FindkeyHelper: ", n.Pagenum)
 	wasFound, index := n.Findkeyinnode(Key)
 	if wasFound {
 		return index, n, nil
@@ -185,6 +188,7 @@ func Findkeyhelper(n *Node, Key []byte, exact bool, ancestorIndexes *[]int) (int
 	if err != nil {
 		return -1, nil, err
 	}
+	utils.Info(3, "FindkeyHelper Recur Call ")
 	return Findkeyhelper(nextChild, Key, exact, ancestorIndexes)
 }
 
@@ -261,13 +265,13 @@ func (parentNode *Node) split(nodeToSplit *Node, nodeToSplitIndex int) {
 	}
 
 	parentNode.addItem(middleItem, nodeToSplitIndex)
-	fmt.Println("Writing child nodes: ", len(parentNode.Childnodes), nodeToSplitIndex)
+	// fmt.println("Writing child nodes: ", len(parentNode.Childnodes), nodeToSplitIndex)
 	if len(parentNode.Childnodes) == nodeToSplitIndex+1 {
 
 		parentNode.Childnodes = append(parentNode.Childnodes, newNode.Pagenum)
 	} else {
 		parentNode.Childnodes = append(parentNode.Childnodes[:nodeToSplitIndex+1], parentNode.Childnodes[nodeToSplitIndex:]...)
-		fmt.Println(parentNode.Childnodes)
+		// fmt.println(parentNode.Childnodes)
 		parentNode.Childnodes[nodeToSplitIndex] = newNode.Pagenum
 	}
 
@@ -387,7 +391,7 @@ func (n *Node) merge(bNode *Node, bNodeIndex int) error {
 	//*	      /        |       \       ------>         /          \
 	//*      a          b        c                    a            c
 	//*     1,2         4        6,7               1,2,3,4         6,7
-	fmt.Println("Merging nodes")
+	// fmt.println("Merging nodes")
 	aNode, err := n.Getnode(n.Childnodes[bNodeIndex-1])
 	if err != nil {
 		return err
@@ -445,7 +449,7 @@ func (n *Node) rebalanceRemove(unbalancedNode *Node, unbalancedNodeIndex int) er
 	//* parameters, so the unbalanced node right sibling, will be merged into the unbalanced node.
 	if unbalancedNodeIndex == 0 {
 		if rightNode == nil {
-			fmt.Println("right node is nil")
+			// fmt.println("right node is nil")
 		}
 		return pNode.merge(rightNode, unbalancedNodeIndex+1)
 	}

@@ -1,6 +1,10 @@
 package core
 
-import "encoding/binary"
+import (
+	"BynxDB/core/utils"
+	"encoding/binary"
+	"fmt"
+)
 
 const (
 	metaPageNum = 0
@@ -8,9 +12,9 @@ const (
 
 // * Meta is the Meta page of the db
 type Meta struct {
-	Root         pgNum
 	freelistPage pgNum
 	TableDefPage pgNum
+	Root         pgNum
 }
 
 func newMetaPage() *Meta {
@@ -37,4 +41,12 @@ func (m *Meta) Deserialize(buf []byte) {
 	pos += pageNumSize
 
 	m.TableDefPage = pgNum(binary.LittleEndian.Uint64(buf[pos:]))
+	utils.InfoLogAndPrint("Deserialized Meta: ", m.State())
+}
+
+func (m *Meta) State() (ret string) {
+	ret += "Root Page: " + fmt.Sprint(m.Root)
+	ret += " Freelist Page: " + fmt.Sprint(m.freelistPage)
+	ret += " TableDefPage: " + fmt.Sprint(m.TableDefPage)
+	return
 }

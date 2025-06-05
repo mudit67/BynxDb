@@ -3,7 +3,6 @@ package testing
 import (
 	"BynxDB/core"
 	"encoding/json"
-	"fmt"
 	"os"
 )
 
@@ -15,25 +14,25 @@ type table struct {
 }
 
 func init() {
-	fmt.Println("Check")
+	// fmt.println("Check")
 	var table table
 	data, err := os.ReadFile("./testing/faculty.json")
 	if err != nil {
-		fmt.Println(err)
+		// fmt.println(err)
 		os.Exit(1)
 	}
 	json.Unmarshal(data, &table)
-	fmt.Println(table.Cols)
-	fmt.Println(table.Types)
-	fmt.Println(table.Unique)
-	fmt.Println(table.Records)
+	// fmt.println(table.Cols)
+	// fmt.println(table.Types)
+	// fmt.println(table.Unique)
+	// fmt.println(table.Records)
 	tD := &core.TableDef{Cols: table.Cols, Types: table.Types, UniqueCols: table.Unique}
 	db, err := core.DbInit("faculty", tD)
 	if err != nil {
-		fmt.Println(err)
+		// fmt.println(err)
 	}
 	for _, row := range table.Records {
-		fmt.Println(row)
+		// fmt.println(row)
 		for i, col := range row {
 			switch data := col.(type) {
 			case float64:
@@ -41,14 +40,14 @@ func init() {
 			case string:
 				row[i] = []byte(data)
 			}
-			fmt.Printf("%d: %T\n", i, row[i])
+			// fmt.printf("%d: %T\n", i, row[i])
 		}
 		err := db.Insert(row...)
 		if err != nil {
 			// panic(err)
-			fmt.Println(err)
+			// fmt.println(err)
 		}
 	}
 	db.Close()
-	fmt.Println("-- End Test --")
+	// fmt.println("-- End Test --")
 }

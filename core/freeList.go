@@ -1,7 +1,9 @@
 package core
 
 import (
+	"BynxDB/core/utils"
 	"encoding/binary"
+	"fmt"
 )
 
 type freeList struct {
@@ -25,7 +27,8 @@ func (fL *freeList) GetNextPage() pgNum {
 		return freePgNum
 	}
 	fL.maxPage += 1
-	return fL.maxPage
+	utils.Info(2, "Max Page: ", fL.maxPage)
+	return (fL.maxPage - 1)
 }
 
 func (fL *freeList) ReleasedPage(pageNum pgNum) {
@@ -65,4 +68,13 @@ func (fL *freeList) deserialize(buf []byte) {
 		pos += pageNumSize
 	}
 
+}
+
+func (fl *freeList) State() (ret string) {
+	ret += "Max Page: " + fmt.Sprint(fl.maxPage)
+	ret += " Released Pages:"
+	for _, v := range fl.releasedPages {
+		ret += " " + fmt.Sprint(v)
+	}
+	return
 }
