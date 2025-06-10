@@ -111,6 +111,13 @@ func (db *DB) PKeyQuery(val any) ([]any, error) {
 }
 
 func (db *DB) PointQuery(colIndex int, val any) ([][]any, error) {
+	if colIndex == 0 {
+		if row, err := db.PKeyQuery(val); err != nil {
+			return nil, err
+		} else {
+			return [][]any{row}, nil
+		}
+	}
 	for _, col := range db.records.UniqueCols {
 		if colIndex == col {
 			row, err := db.PointQueryUniqueCol(colIndex, val)
@@ -184,14 +191,18 @@ func (db *DB) SelectEntireTable() ([][]any, error) {
 }
 
 func (db *DB) RangeQuery(colIndex int, low any, high any) ([][]any, error) {
-	lowKey, err := checkTypeAndEncodeByte(db.records.TableDef, colIndex, low, []byte{})
+	lowKey := make([]byte, 0)
+	highKey := make([]byte, 0)
+	lowKey, err := checkTypeAndEncodeByte(db.records.TableDef, colIndex, low, lowKey)
 	if err != nil {
 		return nil, err
 	}
-	highKey, err := checkTypeAndEncodeByte(db.records.TableDef, colIndex, high, []byte{})
+	lowKey = lowKey[2:]
+	highKey, err = checkTypeAndEncodeByte(db.records.TableDef, colIndex, high, highKey)
 	if err != nil {
 		return nil, err
 	}
+	highKey = highKey[2:]
 	items, err := db.records.FetchAll(0)
 	if err != nil {
 		return nil, err
@@ -209,8 +220,19 @@ func (db *DB) RangeQuery(colIndex int, low any, high any) ([][]any, error) {
 				keyToCom = row[colIndex-1].([]byte)
 			}
 		}
-		lowCom := bytes.Compare(lowKey, keyToCom)
-		highCom := bytes.Compare(highKey, keyToCom)
+		var lowCom, highCom int
+		switch db.records.TableDef.Types[colIndex] {
+		case TYPE_BYTE:
+			utils.Info(4, "Range Query Type Byte")
+			lowCom = bytes.Compare(lowKey, keyToCom)
+			highCom = bytes.Compare(highKey, keyToCom)
+			utils.Info(4, string(keyToCom), (keyToCom), (lowKey), (highKey), lowCom, highCom)
+		case TYPE_INT64:
+			lowCom = int(binary.LittleEndian.Uint64(lowKey)) - int(binary.LittleEndian.Uint64(keyToCom))
+			highCom = int(binary.LittleEndian.Uint64(highKey)) - int(binary.LittleEndian.Uint64(keyToCom))
+
+			// utils.Info(4, "Range Query Type INT", int(binary.LittleEndian.Uint64(keyToCom)), int(binary.LittleEndian.Uint64(lowKey)), int(binary.LittleEndian.Uint64(highKey)), lowCom, highCom)
+		}
 		// // fmt.println(lowCom, highCom, keyToCom)
 		if lowCom <= 0 && highCom >= 0 {
 			itKey, _ := checkTypeAndDecodeCol(db.records.TableDef, 0, item.Key)
@@ -226,7 +248,7 @@ func (db *DB) UpdatePoint(colIndex int, valToChange any, newVal any) error {
 	if err != nil {
 		return err
 	}
-	if rowsToUpdate == nil || len(rowsToUpdate) == 0 {
+	if len(rowsToUpdate) == 0 {
 		return errors.New("no row found to update")
 	}
 	for ind := range rowsToUpdate {
@@ -365,6 +387,7 @@ func checkTypeAndDecodeCol(tD *TableDef, colIndex int, buf []byte) (any, int) {
 	}
 }
 func checkTypeAndEncodeByte(tD *TableDef, colIndex int, val any, buf []byte) ([]byte, error) {
+
 	switch data := val.(type) {
 	case int:
 		if tD.Types[colIndex] != TYPE_INT64 {
