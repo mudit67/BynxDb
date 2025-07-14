@@ -45,7 +45,7 @@ func DalCreate(path string, options *Options) (*DAL, error) {
 	// * If a database exists
 	if _, err := os.Stat(path); err == nil {
 		// // fmt.println("Database Exists")
-		utils.Info(1, "Database Exists")
+		utils.InfoLogAndPrint("Database Exists")
 		dal.file, err = os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0666)
 		if err != nil {
 			_ = dal.Close()
@@ -187,7 +187,7 @@ func (d *DAL) Readfreelist() (*freeList, error) {
 	freeList := freeListCreate()
 
 	freeList.deserialize(p.Data)
-	utils.InfoLogAndPrint("Reading Freelist: ", freeList.State())
+	utils.Info(2, "Reading Freelist: ", freeList.State())
 	return freeList, nil
 
 }

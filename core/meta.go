@@ -41,7 +41,7 @@ func (m *Meta) Deserialize(buf []byte) {
 	pos += pageNumSize
 
 	m.TableDefPage = pgNum(binary.LittleEndian.Uint64(buf[pos:]))
-	utils.InfoLogAndPrint("Deserialized Meta: ", m.State())
+	utils.Info(2, "Deserialized Meta: ", m.State())
 }
 
 func (m *Meta) State() (ret string) {

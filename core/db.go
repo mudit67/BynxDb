@@ -197,12 +197,12 @@ func (db *DB) RangeQuery(colIndex int, low any, high any) ([][]any, error) {
 	if err != nil {
 		return nil, err
 	}
-	lowKey = lowKey[2:]
+	// lowKey = lowKey[2:]
 	highKey, err = checkTypeAndEncodeByte(db.records.TableDef, colIndex, high, highKey)
 	if err != nil {
 		return nil, err
 	}
-	highKey = highKey[2:]
+	// highKey = highKey[2:]
 	items, err := db.records.FetchAll(0)
 	if err != nil {
 		return nil, err
@@ -228,10 +228,12 @@ func (db *DB) RangeQuery(colIndex int, low any, high any) ([][]any, error) {
 			highCom = bytes.Compare(highKey, keyToCom)
 			utils.Info(4, string(keyToCom), (keyToCom), (lowKey), (highKey), lowCom, highCom)
 		case TYPE_INT64:
+
+			utils.Info(4, "Range Query Type INT", keyToCom, lowKey, highKey)
+
 			lowCom = int(binary.LittleEndian.Uint64(lowKey)) - int(binary.LittleEndian.Uint64(keyToCom))
 			highCom = int(binary.LittleEndian.Uint64(highKey)) - int(binary.LittleEndian.Uint64(keyToCom))
 
-			// utils.Info(4, "Range Query Type INT", int(binary.LittleEndian.Uint64(keyToCom)), int(binary.LittleEndian.Uint64(lowKey)), int(binary.LittleEndian.Uint64(highKey)), lowCom, highCom)
 		}
 		// // fmt.println(lowCom, highCom, keyToCom)
 		if lowCom <= 0 && highCom >= 0 {
@@ -286,7 +288,7 @@ func (db *DB) UpdatePoint(colIndex int, valToChange any, newVal any) error {
 }
 
 func (db *DB) Delete(colIndex int, val any) error {
-	// fmt.println("Deleting: ", val, " In column: ", colIndex)
+	utils.Info(4, "Deleting: ", val, " In column: ", colIndex)
 	key, err := checkTypeAndEncodeByte(db.records.TableDef, colIndex, val, []byte{})
 	// * Primary key column
 	if colIndex == 0 {
@@ -320,6 +322,7 @@ func (db *DB) Delete(colIndex int, val any) error {
 					return errors.New("value not found")
 				}
 				pKey, _ := checkTypeAndDecodeCol(db.records.TableDef, 0, item.Value)
+				utils.Info(4, "Deleting pKey: ", pKey)
 				return db.Delete(0, pKey)
 			}
 		}
