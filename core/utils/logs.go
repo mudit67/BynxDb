@@ -16,6 +16,14 @@ func InitFileLogs() {
 		fmt.Println(os.Args[1])
 		logDepth, _ = strconv.Atoi(os.Args[1])
 	}
+	// Ensure the logs directory exists
+	logsDir := "logs"
+	if _, err := os.Stat(logsDir); os.IsNotExist(err) {
+		err := os.MkdirAll(logsDir, 0755)
+		if err != nil {
+			log.Fatalln("Unable to create Logs Directory")
+		}
+	}
 	file, err := os.OpenFile(logsFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatalln("Unable to load Logs File")

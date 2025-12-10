@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
+	"runtime"
 )
 
 type Collection struct {
@@ -21,13 +23,47 @@ var options = &Options{
 	MaxFillPercent: 0.025,
 }
 
+// getProjectRoot finds the project root directory by looking for go.mod file
+func getProjectRoot() (string, error) {
+	// Get the path of this source file
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		return "", fmt.Errorf("unable to get current file path")
+	}
+
+	// Start from the directory containing this file
+	dir := filepath.Dir(filename)
+
+	// Walk up the directory tree until we find go.mod
+	for {
+		goModPath := filepath.Join(dir, "go.mod")
+		if _, err := os.Stat(goModPath); err == nil {
+			// Found go.mod, this is the project root
+			return dir, nil
+		}
+
+		// Move up one directory
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			// Reached the root of the filesystem without finding go.mod
+			return "", fmt.Errorf("could not find project root (go.mod not found)")
+		}
+		dir = parent
+	}
+}
+
 func CollectionCreate(name []byte, tD *TableDef) (*Collection, error) {
 	utils.Info(1, "Init "+string(name)+" Collections.")
 	c := &Collection{
 		Name:     name,
 		TableDef: tD,
 	}
-	dal, err := DalCreate("./db/"+string(name)+".db", options)
+	rootDir, err := getProjectRoot()
+	if err != nil {
+		return nil, err
+	}
+	dbPath := filepath.Join(rootDir, "db", string(name)+".db")
+	dal, err := DalCreate(dbPath, options)
 	if err != nil {
 		// fmt.println(err)
 		os.Exit(1)

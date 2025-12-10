@@ -7,10 +7,10 @@ import (
 )
 
 type table struct {
-	Cols    []string `json:cols`
-	Types   []uint16 `json:types`
-	Unique  []int    `json:unique`
-	Records [][]any  `json:records`
+	Cols    []string `json:"cols"`
+	Types   []uint16 `json:"types"`
+	Unique  []int    `json:"unique"`
+	Records [][]any  `json:"records"`
 }
 
 func init() {
